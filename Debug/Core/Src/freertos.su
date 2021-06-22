@@ -1,3 +1,3 @@
 freertos.c:82:6:MX_FREERTOS_Init	8	static
 freertos.c:127:6:StartDefaultTask	16	static
-freertos.c:148:6:StartLEDheartbeat	16	static
+freertos.c:152:6:StartLEDheartbeat	24	static

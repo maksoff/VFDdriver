@@ -129,7 +129,11 @@ void StartDefaultTask(void *argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
+
+  // Enable USB pull-up
   HAL_GPIO_WritePin(USB_PU_GPIO_Port, USB_PU_Pin, GPIO_PIN_SET);
+
+  vTaskDelete(NULL);
   /* Infinite loop */
   for(;;)
   {
@@ -147,13 +151,15 @@ void StartDefaultTask(void *argument)
 /* USER CODE END Header_StartLEDheartbeat */
 void StartLEDheartbeat(void *argument)
 {
-  /* USER CODE BEGIN StartLEDheartbeat */
-  /* Infinite loop */
-  for(;;)
-  {
-	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-	  osDelay(500);
-  }
+	/* USER CODE BEGIN StartLEDheartbeat */
+	TickType_t xLastWakeTime;
+	const TickType_t xPeriod = 500 / portTICK_PERIOD_MS;
+	/* Infinite loop */
+	for (;;) {
+		xLastWakeTime = xTaskGetTickCount();
+		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		vTaskDelayUntil(&xLastWakeTime, xPeriod);
+	}
   /* USER CODE END StartLEDheartbeat */
 }
 

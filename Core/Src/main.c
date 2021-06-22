@@ -16,6 +16,15 @@
   *
   ******************************************************************************
   */
+
+//TODO microrl - separate in library
+//TODO enable Watchdog
+
+/**
+ * 2021 06 21 start of the project
+ * Driver for VFD display + clock + playground
+ */
+
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -25,6 +34,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "microrl.h"
+#include "microrl_cmd.h"
+#include "usbd_cdc_if.h"
+#include "SEGGER_RTT.h"
 
 /* USER CODE END Includes */
 
@@ -45,6 +58,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+microrl_t mcrl;
+microrl_t * p_mcrl = &mcrl;
 
 /* USER CODE END PV */
 
@@ -67,6 +82,19 @@ void MX_FREERTOS_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+#if defined (SEGGER_RTT_PRINT)
+	char test_str[256];
+	len = 0;
+	uint16_t i = 0;
+	while (str[len] != 0)
+	{
+		if (str[len] >= ' ')
+			test_str[i++] = str[len];
+		len++;
+	}
+	test_str[i] = '\0';
+	SEGGER_RTT_WriteString(0,test_str);
+#endif
 
   /* USER CODE END 1 */
 

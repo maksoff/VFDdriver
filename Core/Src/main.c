@@ -19,6 +19,7 @@
 
 //TODO microrl - separate in library
 //TODO enable Watchdog
+//TODO signal after usb receive
 
 /**
  * 2021 06 21 start of the project

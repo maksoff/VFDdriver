@@ -26,7 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "freertos_inc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,6 +62,18 @@ const osThreadAttr_t LEDheartbeat_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for taskUSB_rcv */
+osThreadId_t taskUSB_rcvHandle;
+const osThreadAttr_t taskUSB_rcv_attributes = {
+  .name = "taskUSB_rcv",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for qUSB_rcv */
+osMessageQueueId_t qUSB_rcvHandle;
+const osMessageQueueAttr_t qUSB_rcv_attributes = {
+  .name = "qUSB_rcv"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -70,6 +82,7 @@ const osThreadAttr_t LEDheartbeat_attributes = {
 
 void StartDefaultTask(void *argument);
 void StartLEDheartbeat(void *argument);
+void StartUSB_rcv(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -96,6 +109,10 @@ void MX_FREERTOS_Init(void) {
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
+  /* Create the queue(s) */
+  /* creation of qUSB_rcv */
+  qUSB_rcvHandle = osMessageQueueNew (64, sizeof(uint8_t), &qUSB_rcv_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -106,6 +123,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of LEDheartbeat */
   LEDheartbeatHandle = osThreadNew(StartLEDheartbeat, NULL, &LEDheartbeat_attributes);
+
+  /* creation of taskUSB_rcv */
+  taskUSB_rcvHandle = osThreadNew(StartUSB_rcv, NULL, &taskUSB_rcv_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -130,6 +150,8 @@ void StartDefaultTask(void *argument)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
 
+  qUSB_rcvQueue = qUSB_rcvHandle;
+
   // Enable USB pull-up
   HAL_GPIO_WritePin(USB_PU_GPIO_Port, USB_PU_Pin, GPIO_PIN_SET);
 
@@ -151,7 +173,7 @@ void StartDefaultTask(void *argument)
 /* USER CODE END Header_StartLEDheartbeat */
 void StartLEDheartbeat(void *argument)
 {
-	/* USER CODE BEGIN StartLEDheartbeat */
+  /* USER CODE BEGIN StartLEDheartbeat */
 	TickType_t xLastWakeTime;
 	const TickType_t xPeriod = 500 / portTICK_PERIOD_MS;
 	/* Infinite loop */
@@ -161,6 +183,26 @@ void StartLEDheartbeat(void *argument)
 		vTaskDelayUntil(&xLastWakeTime, xPeriod);
 	}
   /* USER CODE END StartLEDheartbeat */
+}
+
+/* USER CODE BEGIN Header_StartUSB_rcv */
+/**
+* @brief Function implementing the taskUSB_rcv thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartUSB_rcv */
+void StartUSB_rcv(void *argument)
+{
+  /* USER CODE BEGIN StartUSB_rcv */
+  /* Infinite loop */
+	char buf;
+  for(;;)
+  {
+	  xQueueReceive(qUSB_rcvQueue, &buf, portMAX_DELAY );
+	  SEGGER_RTT_PutChar(0, buf);
+  }
+  /* USER CODE END StartUSB_rcv */
 }
 
 /* Private application code --------------------------------------------------*/

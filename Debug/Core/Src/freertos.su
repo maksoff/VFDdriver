@@ -1,3 +1,4 @@
-freertos.c:82:6:MX_FREERTOS_Init	8	static
-freertos.c:127:6:StartDefaultTask	16	static
-freertos.c:152:6:StartLEDheartbeat	24	static
+freertos.c:95:6:MX_FREERTOS_Init	8	static
+freertos.c:147:6:StartDefaultTask	16	static
+freertos.c:174:6:StartLEDheartbeat	24	static
+freertos.c:195:6:StartUSB_rcv	24	static

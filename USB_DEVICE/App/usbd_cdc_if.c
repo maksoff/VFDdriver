@@ -23,6 +23,8 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
+#include "FreeRTOS.h"
+#include "freertos_inc.h"
 
 /* USER CODE END INCLUDE */
 
@@ -260,6 +262,13 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
+	BaseType_t xHigherPriorityTaskWoken;
+	/* We have not woken a task at the start of the ISR. */
+	xHigherPriorityTaskWoken = pdFALSE;
+	for (uint32_t i = 0; i < (*Len); i++)
+	{
+		xQueueSendToBackFromISR(qUSB_rcvQueue, &Buf[i], &xHigherPriorityTaskWoken );
+	}
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);

@@ -39,7 +39,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
  ../USB_DEVICE/Target/usbd_conf.h ../Core/Inc/gpio.h ../Core/Inc/main.h \
  ../Core/Inc/microrl.h ../Core/Inc/microrl_config.h \
- ../Core/Inc/microrl_cmd.h ../USB_DEVICE/App/usbd_cdc_if.h \
+ ../Core/Inc/microrl_cmd.h ../Core/Inc/microrl.h \
+ ../USB_DEVICE/App/usbd_cdc_if.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
@@ -137,6 +138,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/microrl_config.h:
 
 ../Core/Inc/microrl_cmd.h:
+
+../Core/Inc/microrl.h:
 
 ../USB_DEVICE/App/usbd_cdc_if.h:
 

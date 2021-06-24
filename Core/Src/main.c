@@ -19,7 +19,6 @@
 
 //TODO microrl - separate in library
 //TODO enable Watchdog
-//TODO signal after usb receive
 
 /**
  * 2021 06 21 start of the project
@@ -59,8 +58,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-microrl_t mcrl;
-microrl_t * p_mcrl = &mcrl;
 
 /* USER CODE END PV */
 
@@ -83,19 +80,6 @@ void MX_FREERTOS_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-#if defined (SEGGER_RTT_PRINT)
-	char test_str[256];
-	len = 0;
-	uint16_t i = 0;
-	while (str[len] != 0)
-	{
-		if (str[len] >= ' ')
-			test_str[i++] = str[len];
-		len++;
-	}
-	test_str[i] = '\0';
-	SEGGER_RTT_WriteString(0,test_str);
-#endif
 
   /* USER CODE END 1 */
 

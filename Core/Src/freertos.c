@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "freertos_inc.h"
+#include "microrl_cmd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,6 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
+
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -66,7 +68,7 @@ const osThreadAttr_t LEDheartbeat_attributes = {
 osThreadId_t taskUSB_rcvHandle;
 const osThreadAttr_t taskUSB_rcv_attributes = {
   .name = "taskUSB_rcv",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for qUSB_rcv */
@@ -77,6 +79,7 @@ const osMessageQueueAttr_t qUSB_rcv_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
+
 
 /* USER CODE END FunctionPrototypes */
 
@@ -128,6 +131,8 @@ void MX_FREERTOS_Init(void) {
   taskUSB_rcvHandle = osThreadNew(StartUSB_rcv, NULL, &taskUSB_rcv_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
+
+  qUSB_rcvQueue = qUSB_rcvHandle; // adding to freertos_inc.h
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
@@ -150,10 +155,12 @@ void StartDefaultTask(void *argument)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
 
-  qUSB_rcvQueue = qUSB_rcvHandle;
 
   // Enable USB pull-up
   HAL_GPIO_WritePin(USB_PU_GPIO_Port, USB_PU_Pin, GPIO_PIN_SET);
+  osDelay(10);
+  init_microrl();
+  set_CDC_ready(); // allow to send
 
   vTaskDelete(NULL);
   /* Infinite loop */
@@ -185,6 +192,20 @@ void StartLEDheartbeat(void *argument)
   /* USER CODE END StartLEDheartbeat */
 }
 
+void SEGGER_u32(uint32_t dig)
+{
+	char str [8];
+	for (int i = 0; i < 5; i++)
+	{
+		str[4 - i] = dig % 10 + '0';
+		dig /= 10;
+	}
+	str[5] = '\r';
+	str[6] = '\n';
+	str[7] = '\0';
+	SEGGER_RTT_WriteString(0, str);
+}
+
 /* USER CODE BEGIN Header_StartUSB_rcv */
 /**
 * @brief Function implementing the taskUSB_rcv thread.
@@ -197,10 +218,20 @@ void StartUSB_rcv(void *argument)
   /* USER CODE BEGIN StartUSB_rcv */
   /* Infinite loop */
 	char buf;
+
+	UBaseType_t uxHighWaterMark;
+
+	/* Inspect our own high water mark on entering the task. */
+	uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+	SEGGER_u32((uint32_t)uxHighWaterMark);
+
   for(;;)
   {
 	  xQueueReceive(qUSB_rcvQueue, &buf, portMAX_DELAY );
-	  SEGGER_RTT_PutChar(0, buf);
+	  microrl_print_char(buf);
+	  uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+	  SEGGER_u32((uint32_t)uxHighWaterMark);
+
   }
   /* USER CODE END StartUSB_rcv */
 }

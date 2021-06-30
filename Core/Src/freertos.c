@@ -28,6 +28,8 @@
 /* USER CODE BEGIN Includes */
 #include "freertos_inc.h"
 #include "microrl_cmd.h"
+#include "SEGGER_RTT.h"
+#include "usart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,10 +73,41 @@ const osThreadAttr_t taskUSB_rcv_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for SeggerRTT */
+osThreadId_t SeggerRTTHandle;
+const osThreadAttr_t SeggerRTT_attributes = {
+  .name = "SeggerRTT",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for UARTtask */
+osThreadId_t UARTtaskHandle;
+const osThreadAttr_t UARTtask_attributes = {
+  .name = "UARTtask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for debugRTT */
+osThreadId_t debugRTTHandle;
+const osThreadAttr_t debugRTT_attributes = {
+  .name = "debugRTT",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for qUSB_rcv */
 osMessageQueueId_t qUSB_rcvHandle;
 const osMessageQueueAttr_t qUSB_rcv_attributes = {
   .name = "qUSB_rcv"
+};
+/* Definitions for qRTT */
+osMessageQueueId_t qRTTHandle;
+const osMessageQueueAttr_t qRTT_attributes = {
+  .name = "qRTT"
+};
+/* Definitions for qdebugRTT */
+osMessageQueueId_t qdebugRTTHandle;
+const osMessageQueueAttr_t qdebugRTT_attributes = {
+  .name = "qdebugRTT"
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -86,6 +119,9 @@ const osMessageQueueAttr_t qUSB_rcv_attributes = {
 void StartDefaultTask(void *argument);
 void StartLEDheartbeat(void *argument);
 void StartUSB_rcv(void *argument);
+void StartSeggerRTT(void *argument);
+void StartUARTtask(void *argument);
+void StartdebugRTT(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -116,6 +152,12 @@ void MX_FREERTOS_Init(void) {
   /* creation of qUSB_rcv */
   qUSB_rcvHandle = osMessageQueueNew (64, sizeof(uint8_t), &qUSB_rcv_attributes);
 
+  /* creation of qRTT */
+  qRTTHandle = osMessageQueueNew (32, sizeof(uint32_t), &qRTT_attributes);
+
+  /* creation of qdebugRTT */
+  qdebugRTTHandle = osMessageQueueNew (16, sizeof(uint8_t), &qdebugRTT_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -129,6 +171,15 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of taskUSB_rcv */
   taskUSB_rcvHandle = osThreadNew(StartUSB_rcv, NULL, &taskUSB_rcv_attributes);
+
+  /* creation of SeggerRTT */
+  SeggerRTTHandle = osThreadNew(StartSeggerRTT, NULL, &SeggerRTT_attributes);
+
+  /* creation of UARTtask */
+  UARTtaskHandle = osThreadNew(StartUARTtask, NULL, &UARTtask_attributes);
+
+  /* creation of debugRTT */
+  debugRTTHandle = osThreadNew(StartdebugRTT, NULL, &debugRTT_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 
@@ -192,20 +243,6 @@ void StartLEDheartbeat(void *argument)
   /* USER CODE END StartLEDheartbeat */
 }
 
-void SEGGER_u32(uint32_t dig)
-{
-	char str [8];
-	for (int i = 0; i < 5; i++)
-	{
-		str[4 - i] = dig % 10 + '0';
-		dig /= 10;
-	}
-	str[5] = '\r';
-	str[6] = '\n';
-	str[7] = '\0';
-	SEGGER_RTT_WriteString(0, str);
-}
-
 /* USER CODE BEGIN Header_StartUSB_rcv */
 /**
 * @brief Function implementing the taskUSB_rcv thread.
@@ -219,26 +256,125 @@ void StartUSB_rcv(void *argument)
   /* Infinite loop */
 	char buf;
 
-	UBaseType_t uxHighWaterMark;
+	UBaseType_t uxHighWaterMark, uxHighWaterMark_old;
 
 	/* Inspect our own high water mark on entering the task. */
-	uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-	SEGGER_u32((uint32_t)uxHighWaterMark);
+	uxHighWaterMark_old = uxTaskGetStackHighWaterMark( NULL );
+	uxHighWaterMark = uxHighWaterMark_old;
 
   for(;;)
   {
 	  xQueueReceive(qUSB_rcvQueue, &buf, portMAX_DELAY );
 	  microrl_print_char(buf);
 	  uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-	  SEGGER_u32((uint32_t)uxHighWaterMark);
+	  if (uxHighWaterMark < uxHighWaterMark_old)
+	  {
+		  uxHighWaterMark_old = uxHighWaterMark;
+		  xQueueSend(qRTTHandle, &uxHighWaterMark, portMAX_DELAY);
+	  }
 
   }
   /* USER CODE END StartUSB_rcv */
 }
 
+/* USER CODE BEGIN Header_StartSeggerRTT */
+/**
+* @brief Function implementing the SeggerRTT thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartSeggerRTT */
+void StartSeggerRTT(void *argument)
+{
+  /* USER CODE BEGIN StartSeggerRTT */
+	uint32_t buf;
+	char str [8];
+  /* Infinite loop */
+  for(;;)
+  {
+	  xQueueReceive(qRTTHandle, &buf, portMAX_DELAY );
+		for (int i = 0; i < 5; i++)
+		{
+			str[4 - i] = buf % 10 + '0';
+			buf /= 10;
+		}
+		str[5] = '\r';
+		str[6] = '\n';
+		str[7] = '\0';
+		SEGGER_RTT_WriteString(0, str);
+   // osDelay(1);
+  }
+  /* USER CODE END StartSeggerRTT */
+}
+
+/* USER CODE BEGIN Header_StartUARTtask */
+/**
+* @brief Function implementing the UARTtask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartUARTtask */
+void StartUARTtask(void *argument)
+{
+  /* USER CODE BEGIN StartUARTtask */
+  /* Infinite loop */
+
+  uint8_t data;
+  for(;;)
+  {
+	HAL_UART_Receive_IT(&huart2, &data, 1);
+	/* Wait to be notified of an interrupt. */
+	ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+	if (get_nema())
+		CDC_Transmit_FS(&data, 1);
+	//xQueueSend(qdebugRTTHandle, &data, portMAX_DELAY);
+    //osDelay(1);
+  }
+  /* USER CODE END StartUARTtask */
+}
+
+/* USER CODE BEGIN Header_StartdebugRTT */
+/**
+* @brief Function implementing the debugRTT thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartdebugRTT */
+void StartdebugRTT(void *argument)
+{
+  /* USER CODE BEGIN StartdebugRTT */
+  /* Infinite loop */
+  uint8_t buf;
+  for(;;)
+  {
+	  xQueueReceive(qdebugRTTHandle, &buf, portMAX_DELAY );
+
+	  SEGGER_RTT_Write(1, &buf, 1);
+    //osDelay(1);
+  }
+  /* USER CODE END StartdebugRTT */
+}
+
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart != &huart2)
+		return;
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
+
+   /* Notify the task that the transmission is complete by setting the TX_BIT
+   in the task's notification value. */
+	vTaskNotifyGiveFromISR( UARTtaskHandle,
+					   &xHigherPriorityTaskWoken );
+
+   /* If xHigherPriorityTaskWoken is now set to pdTRUE then a context switch
+   should be performed to ensure the interrupt returns directly to the highest
+   priority task.  The macro used for this purpose is dependent on the port in
+   use and may be called portEND_SWITCHING_ISR(). */
+   portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+}
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

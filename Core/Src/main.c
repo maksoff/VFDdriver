@@ -20,6 +20,10 @@
 //TODO microrl - separate in library
 //TODO enable Watchdog
 
+//TODO PB1 PB2 - buttons
+//TODO PB5 HV_EN
+//TODO RX2 TX2 PA0 (PSS) - UART
+
 /**
  * 2021 06 21 start of the project
  * Driver for VFD display + clock + playground
@@ -29,6 +33,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "spi.h"
+#include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
 
@@ -101,6 +107,8 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_SPI2_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */

@@ -81,20 +81,26 @@ int color_off 		(int argc, const char * const * argv);
 int color_show 		(int argc, const char * const * argv);
 int clear_screen 	(int argc, const char * const * argv);
 
-int led_on 			(int argc, const char * const * argv);
-int led_off 		(int argc, const char * const * argv);
-int led_toggle 		(int argc, const char * const * argv);
-int led_show 		(int argc, const char * const * argv);
-int led_tick 		(int argc, const char * const * argv);
-int led_dcf77 		(int argc, const char * const * argv);
-int time_show 		(int argc, const char * const * argv);
-int time_set 		(int argc, const char * const * argv);
-int print_time 		(int argc, const char * const * argv);
-int date_show 		(int argc, const char * const * argv);
-int date_set 		(int argc, const char * const * argv);
-int print_date 		(int argc, const char * const * argv);
-int print_weekday 	(int argc, const char * const * argv);
-int tack_toggle		(int argc, const char * const * argv);
+int nema_toggle 	(int argc, const char * const * argv);
+int nema_on 		(int argc, const char * const * argv);
+int nema_off 		(int argc, const char * const * argv);
+
+bool get_nema(void);
+
+//int led_on 			(int argc, const char * const * argv);
+//int led_off 		(int argc, const char * const * argv);
+//int led_toggle 		(int argc, const char * const * argv);
+//int led_show 		(int argc, const char * const * argv);
+//int led_tick 		(int argc, const char * const * argv);
+//int led_dcf77 		(int argc, const char * const * argv);
+//int time_show 		(int argc, const char * const * argv);
+//int time_set 		(int argc, const char * const * argv);
+//int print_time 		(int argc, const char * const * argv);
+//int date_show 		(int argc, const char * const * argv);
+//int date_set 		(int argc, const char * const * argv);
+//int print_date 		(int argc, const char * const * argv);
+//int print_weekday 	(int argc, const char * const * argv);
+//int tack_toggle		(int argc, const char * const * argv);
 
 #define EMPTY_CMD_HELP "[]"
 

@@ -85,6 +85,8 @@ int nema_toggle 	(int argc, const char * const * argv);
 int nema_on 		(int argc, const char * const * argv);
 int nema_off 		(int argc, const char * const * argv);
 
+int show_encoder	(int argc, const char * const * argv);
+
 bool get_nema(void);
 
 //int led_on 			(int argc, const char * const * argv);

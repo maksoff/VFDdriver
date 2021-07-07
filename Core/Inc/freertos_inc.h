@@ -16,5 +16,7 @@
 
 osMessageQueueId_t qUSB_rcvQueue;
 
+extern uint16_t encoder_value;
+
 
 #endif /* INC_FREERTOS_INC_H_ */

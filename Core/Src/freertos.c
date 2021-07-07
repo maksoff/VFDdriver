@@ -49,7 +49,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-
+uint16_t encoder_value = 0;
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -112,7 +112,7 @@ const osMessageQueueAttr_t qdebugRTT_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+void process_encoder(void);
 
 /* USER CODE END FunctionPrototypes */
 
@@ -213,10 +213,11 @@ void StartDefaultTask(void *argument)
   init_microrl();
   set_CDC_ready(); // allow to send
 
-  vTaskDelete(NULL);
+  //vTaskDelete(NULL);
   /* Infinite loop */
   for(;;)
   {
+	  process_encoder();
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
@@ -374,6 +375,43 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
    priority task.  The macro used for this purpose is dependent on the port in
    use and may be called portEND_SWITCHING_ISR(). */
    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+}
+
+void process_encoder(void)
+{
+	static uint8_t old;
+	uint8_t new;
+	new = (0b10*HAL_GPIO_ReadPin(enc_a_GPIO_Port, enc_a_Pin) +
+		   0b01*HAL_GPIO_ReadPin(enc_b_GPIO_Port, enc_b_Pin));
+	switch(old)
+		{
+		case 2:
+			{
+			if(new == 3) encoder_value++;
+			if(new == 0) encoder_value--;
+			break;
+			}
+
+		case 0:
+			{
+			if(new == 2) encoder_value++;
+			if(new == 1) encoder_value--;
+			break;
+			}
+		case 1:
+			{
+			if(new == 0) encoder_value++;
+			if(new == 3) encoder_value--;
+			break;
+			}
+		case 3:
+			{
+			if(new == 1) encoder_value++;
+			if(new == 2) encoder_value--;
+			break;
+			}
+		}
+	old = new;
 }
 /* USER CODE END Application */
 

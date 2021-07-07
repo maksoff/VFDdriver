@@ -10,6 +10,7 @@
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 #include "usbd_cdc.h"
+#include "freertos_inc.h"
 
 microrl_t mcrl;
 microrl_t * p_mcrl = &mcrl;
@@ -55,6 +56,7 @@ const microrl_action_t microrl_actions [] =
 		{ 0,		"nema",		"toggle NEMA debug",		nema_toggle},
 		{   1,		"on",		"turn on",					nema_on},
 		{   1,		"off",		"turn off",					nema_off},
+		{ 0,		"encoder",	"display current value",	show_encoder},
 //		{ 0,		"led",		"toggle led",				led_toggle},
 //		{   1,		"on",		"turn on",					led_on},
 //		{   1,		"off",		"turn off",					led_off},
@@ -486,6 +488,26 @@ int nema_off 		(int argc, const char * const * argv)
 	print(ENDL);
 	return 0;
 }
+
+
+int show_encoder (int argc, const char * const * argv)
+{
+
+	uint32_t buf = encoder_value;
+	char str [8];
+
+	for (int i = 0; i < 5; i++)
+	{
+		str[4 - i] = buf % 10 + '0';
+		buf /= 10;
+	}
+	str[5] = '\r';
+	str[6] = '\n';
+	str[7] = '\0';
+	print(str);
+	return 0;
+}
+
 
 bool get_nema(void)
 {

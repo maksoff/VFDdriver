@@ -43,7 +43,6 @@
 #include "microrl.h"
 #include "microrl_cmd.h"
 #include "usbd_cdc_if.h"
-#include "SEGGER_RTT.h"
 
 /* USER CODE END Includes */
 

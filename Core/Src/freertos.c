@@ -28,8 +28,8 @@
 /* USER CODE BEGIN Includes */
 #include "freertos_inc.h"
 #include "microrl_cmd.h"
-#include "SEGGER_RTT.h"
 #include "usart.h"
+#include "spi.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -73,13 +73,6 @@ const osThreadAttr_t taskUSB_rcv_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for SeggerRTT */
-osThreadId_t SeggerRTTHandle;
-const osThreadAttr_t SeggerRTT_attributes = {
-  .name = "SeggerRTT",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
 /* Definitions for UARTtask */
 osThreadId_t UARTtaskHandle;
 const osThreadAttr_t UARTtask_attributes = {
@@ -87,10 +80,10 @@ const osThreadAttr_t UARTtask_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for debugRTT */
-osThreadId_t debugRTTHandle;
-const osThreadAttr_t debugRTT_attributes = {
-  .name = "debugRTT",
+/* Definitions for Encoder */
+osThreadId_t EncoderHandle;
+const osThreadAttr_t Encoder_attributes = {
+  .name = "Encoder",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
@@ -98,16 +91,6 @@ const osThreadAttr_t debugRTT_attributes = {
 osMessageQueueId_t qUSB_rcvHandle;
 const osMessageQueueAttr_t qUSB_rcv_attributes = {
   .name = "qUSB_rcv"
-};
-/* Definitions for qRTT */
-osMessageQueueId_t qRTTHandle;
-const osMessageQueueAttr_t qRTT_attributes = {
-  .name = "qRTT"
-};
-/* Definitions for qdebugRTT */
-osMessageQueueId_t qdebugRTTHandle;
-const osMessageQueueAttr_t qdebugRTT_attributes = {
-  .name = "qdebugRTT"
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -119,9 +102,8 @@ void process_encoder(void);
 void StartDefaultTask(void *argument);
 void StartLEDheartbeat(void *argument);
 void StartUSB_rcv(void *argument);
-void StartSeggerRTT(void *argument);
 void StartUARTtask(void *argument);
-void StartdebugRTT(void *argument);
+void StartEncoder(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -152,12 +134,6 @@ void MX_FREERTOS_Init(void) {
   /* creation of qUSB_rcv */
   qUSB_rcvHandle = osMessageQueueNew (64, sizeof(uint8_t), &qUSB_rcv_attributes);
 
-  /* creation of qRTT */
-  qRTTHandle = osMessageQueueNew (32, sizeof(uint32_t), &qRTT_attributes);
-
-  /* creation of qdebugRTT */
-  qdebugRTTHandle = osMessageQueueNew (16, sizeof(uint8_t), &qdebugRTT_attributes);
-
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -172,14 +148,11 @@ void MX_FREERTOS_Init(void) {
   /* creation of taskUSB_rcv */
   taskUSB_rcvHandle = osThreadNew(StartUSB_rcv, NULL, &taskUSB_rcv_attributes);
 
-  /* creation of SeggerRTT */
-  SeggerRTTHandle = osThreadNew(StartSeggerRTT, NULL, &SeggerRTT_attributes);
-
   /* creation of UARTtask */
   UARTtaskHandle = osThreadNew(StartUARTtask, NULL, &UARTtask_attributes);
 
-  /* creation of debugRTT */
-  debugRTTHandle = osThreadNew(StartdebugRTT, NULL, &debugRTT_attributes);
+  /* creation of Encoder */
+  EncoderHandle = osThreadNew(StartEncoder, NULL, &Encoder_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 
@@ -217,7 +190,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  process_encoder();
+    process_encoder();
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
@@ -235,9 +208,11 @@ void StartLEDheartbeat(void *argument)
   /* USER CODE BEGIN StartLEDheartbeat */
 	TickType_t xLastWakeTime;
 	const TickType_t xPeriod = 500 / portTICK_PERIOD_MS;
+
 	/* Infinite loop */
 	for (;;) {
 		xLastWakeTime = xTaskGetTickCount();
+
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 		vTaskDelayUntil(&xLastWakeTime, xPeriod);
 	}
@@ -271,41 +246,10 @@ void StartUSB_rcv(void *argument)
 	  if (uxHighWaterMark < uxHighWaterMark_old)
 	  {
 		  uxHighWaterMark_old = uxHighWaterMark;
-		  xQueueSend(qRTTHandle, &uxHighWaterMark, portMAX_DELAY);
 	  }
 
   }
   /* USER CODE END StartUSB_rcv */
-}
-
-/* USER CODE BEGIN Header_StartSeggerRTT */
-/**
-* @brief Function implementing the SeggerRTT thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartSeggerRTT */
-void StartSeggerRTT(void *argument)
-{
-  /* USER CODE BEGIN StartSeggerRTT */
-	uint32_t buf;
-	char str [8];
-  /* Infinite loop */
-  for(;;)
-  {
-	  xQueueReceive(qRTTHandle, &buf, portMAX_DELAY );
-		for (int i = 0; i < 5; i++)
-		{
-			str[4 - i] = buf % 10 + '0';
-			buf /= 10;
-		}
-		str[5] = '\r';
-		str[6] = '\n';
-		str[7] = '\0';
-		SEGGER_RTT_WriteString(0, str);
-   // osDelay(1);
-  }
-  /* USER CODE END StartSeggerRTT */
 }
 
 /* USER CODE BEGIN Header_StartUARTtask */
@@ -334,26 +278,51 @@ void StartUARTtask(void *argument)
   /* USER CODE END StartUARTtask */
 }
 
-/* USER CODE BEGIN Header_StartdebugRTT */
+/* USER CODE BEGIN Header_StartEncoder */
 /**
-* @brief Function implementing the debugRTT thread.
+* @brief Function implementing the Encoder thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartdebugRTT */
-void StartdebugRTT(void *argument)
+/* USER CODE END Header_StartEncoder */
+void StartEncoder(void *argument)
 {
-  /* USER CODE BEGIN StartdebugRTT */
+  /* USER CODE BEGIN StartEncoder */
+
+	static bool invert = false;
+	static bool released = true;
+
+  osDelay(200);
+  uint8_t data;
+
   /* Infinite loop */
-  uint8_t buf;
   for(;;)
   {
-	  xQueueReceive(qdebugRTTHandle, &buf, portMAX_DELAY );
 
-	  SEGGER_RTT_Write(1, &buf, 1);
-    //osDelay(1);
+	  if (HAL_GPIO_ReadPin(enc_s_GPIO_Port, enc_s_Pin))
+	  {
+		  released = true;
+	  } else if (released)
+	  {
+		  released = false;
+		  invert = !invert;
+	  }
+
+	  data = 0b01000001; // command 2, write to LED port
+	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+	  osDelay(10);
+
+	  data = ~(1<<((encoder_value >> 2)&0b11));
+	  if (invert)
+		  data =~data;
+
+	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+
+	  osDelay(10);
   }
-  /* USER CODE END StartdebugRTT */
+  /* USER CODE END StartEncoder */
 }
 
 /* Private application code --------------------------------------------------*/
@@ -381,8 +350,8 @@ void process_encoder(void)
 {
 	static uint8_t old;
 	uint8_t new;
-	new = (0b10*HAL_GPIO_ReadPin(enc_a_GPIO_Port, enc_a_Pin) +
-		   0b01*HAL_GPIO_ReadPin(enc_b_GPIO_Port, enc_b_Pin));
+	new = (0b01*HAL_GPIO_ReadPin(enc_a_GPIO_Port, enc_a_Pin) +
+		   0b10*HAL_GPIO_ReadPin(enc_b_GPIO_Port, enc_b_Pin));
 	switch(old)
 		{
 		case 2:

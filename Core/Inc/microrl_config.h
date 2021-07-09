@@ -13,7 +13,7 @@ Command line length, define cmdline buffer size. Set max number of chars + 1,
 because last byte of buffer need to contain '\0' - NULL terminator, and 
 not use for storing inputed char.
 If user input chars more then it parametrs-1, chars not added to command line.*/
-#define _COMMAND_LINE_LEN (1+100)									// for 32 chars
+#define _COMMAND_LINE_LEN (1+50)									// for 32 chars
 
 /*
 Command token number, define max token it command line, if number of token 
@@ -21,7 +21,7 @@ typed in command line exceed this value, then prints message about it and
 command line not to be parced and 'execute' callback will not calls.
 Token is word separate by white space, for example 3 token line:
 "IRin> set mode test" */
-#define _COMMAND_TOKEN_NMB 8
+#define _COMMAND_TOKEN_NMB 5
 
 /*
 Define you prompt string here. You can use colors escape code, for highlight you prompt,
@@ -65,7 +65,7 @@ If not defined, use my own u16int_to_str variant, it's save about 800 byte of co
 on AVR (avr-gcc build).
 Try to build with and without, and compare total code size for tune library.
 */
-#define _USE_LIBC_STDIO
+// #define _USE_LIBC_STDIO
 
 /*
 Enable 'interrupt signal' callback, if user press Ctrl+C */

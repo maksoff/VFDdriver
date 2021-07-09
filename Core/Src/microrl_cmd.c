@@ -153,20 +153,6 @@ void print (const char * str)
 		if (HAL_GetTick() - timeout >= 5)
 			break;
 	CDC_Transmit_FS((uint8_t*)str, len);
-
-#if defined (SEGGER_RTT_PRINT)
-	char test_str[256];
-	len = 0;
-	uint16_t i = 0;
-	while (str[len] != 0)
-	{
-		if (str[len] >= ' ')
-			test_str[i++] = str[len];
-		len++;
-	}
-	test_str[i] = '\0';
-	SEGGER_RTT_WriteString(0,test_str);
-#endif
 }
 
 int find_color_by_name(microrl_color_e color)

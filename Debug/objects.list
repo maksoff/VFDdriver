@@ -1,5 +1,3 @@
-"Core/Src/SEGGER_RTT.o"
-"Core/Src/fifo.o"
 "Core/Src/freertos.o"
 "Core/Src/gpio.o"
 "Core/Src/main.o"

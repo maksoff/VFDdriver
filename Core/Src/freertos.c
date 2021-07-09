@@ -28,7 +28,6 @@
 /* USER CODE BEGIN Includes */
 #include "freertos_inc.h"
 #include "microrl_cmd.h"
-#include "SEGGER_RTT.h"
 #include "usart.h"
 /* USER CODE END Includes */
 
@@ -73,13 +72,6 @@ const osThreadAttr_t taskUSB_rcv_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for SeggerRTT */
-osThreadId_t SeggerRTTHandle;
-const osThreadAttr_t SeggerRTT_attributes = {
-  .name = "SeggerRTT",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
 /* Definitions for UARTtask */
 osThreadId_t UARTtaskHandle;
 const osThreadAttr_t UARTtask_attributes = {
@@ -87,27 +79,10 @@ const osThreadAttr_t UARTtask_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for debugRTT */
-osThreadId_t debugRTTHandle;
-const osThreadAttr_t debugRTT_attributes = {
-  .name = "debugRTT",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
 /* Definitions for qUSB_rcv */
 osMessageQueueId_t qUSB_rcvHandle;
 const osMessageQueueAttr_t qUSB_rcv_attributes = {
   .name = "qUSB_rcv"
-};
-/* Definitions for qRTT */
-osMessageQueueId_t qRTTHandle;
-const osMessageQueueAttr_t qRTT_attributes = {
-  .name = "qRTT"
-};
-/* Definitions for qdebugRTT */
-osMessageQueueId_t qdebugRTTHandle;
-const osMessageQueueAttr_t qdebugRTT_attributes = {
-  .name = "qdebugRTT"
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -119,9 +94,7 @@ void process_encoder(void);
 void StartDefaultTask(void *argument);
 void StartLEDheartbeat(void *argument);
 void StartUSB_rcv(void *argument);
-void StartSeggerRTT(void *argument);
 void StartUARTtask(void *argument);
-void StartdebugRTT(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -152,12 +125,6 @@ void MX_FREERTOS_Init(void) {
   /* creation of qUSB_rcv */
   qUSB_rcvHandle = osMessageQueueNew (64, sizeof(uint8_t), &qUSB_rcv_attributes);
 
-  /* creation of qRTT */
-  qRTTHandle = osMessageQueueNew (32, sizeof(uint32_t), &qRTT_attributes);
-
-  /* creation of qdebugRTT */
-  qdebugRTTHandle = osMessageQueueNew (16, sizeof(uint8_t), &qdebugRTT_attributes);
-
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -172,14 +139,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of taskUSB_rcv */
   taskUSB_rcvHandle = osThreadNew(StartUSB_rcv, NULL, &taskUSB_rcv_attributes);
 
-  /* creation of SeggerRTT */
-  SeggerRTTHandle = osThreadNew(StartSeggerRTT, NULL, &SeggerRTT_attributes);
-
   /* creation of UARTtask */
   UARTtaskHandle = osThreadNew(StartUARTtask, NULL, &UARTtask_attributes);
-
-  /* creation of debugRTT */
-  debugRTTHandle = osThreadNew(StartdebugRTT, NULL, &debugRTT_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 
@@ -271,41 +232,10 @@ void StartUSB_rcv(void *argument)
 	  if (uxHighWaterMark < uxHighWaterMark_old)
 	  {
 		  uxHighWaterMark_old = uxHighWaterMark;
-		  xQueueSend(qRTTHandle, &uxHighWaterMark, portMAX_DELAY);
 	  }
 
   }
   /* USER CODE END StartUSB_rcv */
-}
-
-/* USER CODE BEGIN Header_StartSeggerRTT */
-/**
-* @brief Function implementing the SeggerRTT thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartSeggerRTT */
-void StartSeggerRTT(void *argument)
-{
-  /* USER CODE BEGIN StartSeggerRTT */
-	uint32_t buf;
-	char str [8];
-  /* Infinite loop */
-  for(;;)
-  {
-	  xQueueReceive(qRTTHandle, &buf, portMAX_DELAY );
-		for (int i = 0; i < 5; i++)
-		{
-			str[4 - i] = buf % 10 + '0';
-			buf /= 10;
-		}
-		str[5] = '\r';
-		str[6] = '\n';
-		str[7] = '\0';
-		SEGGER_RTT_WriteString(0, str);
-   // osDelay(1);
-  }
-  /* USER CODE END StartSeggerRTT */
 }
 
 /* USER CODE BEGIN Header_StartUARTtask */
@@ -332,28 +262,6 @@ void StartUARTtask(void *argument)
     //osDelay(1);
   }
   /* USER CODE END StartUARTtask */
-}
-
-/* USER CODE BEGIN Header_StartdebugRTT */
-/**
-* @brief Function implementing the debugRTT thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartdebugRTT */
-void StartdebugRTT(void *argument)
-{
-  /* USER CODE BEGIN StartdebugRTT */
-  /* Infinite loop */
-  uint8_t buf;
-  for(;;)
-  {
-	  xQueueReceive(qdebugRTTHandle, &buf, portMAX_DELAY );
-
-	  SEGGER_RTT_Write(1, &buf, 1);
-    //osDelay(1);
-  }
-  /* USER CODE END StartdebugRTT */
 }
 
 /* Private application code --------------------------------------------------*/

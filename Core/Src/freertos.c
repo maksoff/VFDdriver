@@ -29,6 +29,7 @@
 #include "freertos_inc.h"
 #include "microrl_cmd.h"
 #include "usart.h"
+#include "spi.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -79,6 +80,13 @@ const osThreadAttr_t UARTtask_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for Encoder */
+osThreadId_t EncoderHandle;
+const osThreadAttr_t Encoder_attributes = {
+  .name = "Encoder",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for qUSB_rcv */
 osMessageQueueId_t qUSB_rcvHandle;
 const osMessageQueueAttr_t qUSB_rcv_attributes = {
@@ -95,6 +103,7 @@ void StartDefaultTask(void *argument);
 void StartLEDheartbeat(void *argument);
 void StartUSB_rcv(void *argument);
 void StartUARTtask(void *argument);
+void StartEncoder(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -142,6 +151,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of UARTtask */
   UARTtaskHandle = osThreadNew(StartUARTtask, NULL, &UARTtask_attributes);
 
+  /* creation of Encoder */
+  EncoderHandle = osThreadNew(StartEncoder, NULL, &Encoder_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
 
   qUSB_rcvQueue = qUSB_rcvHandle; // adding to freertos_inc.h
@@ -178,7 +190,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  process_encoder();
+    process_encoder();
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
@@ -196,9 +208,11 @@ void StartLEDheartbeat(void *argument)
   /* USER CODE BEGIN StartLEDheartbeat */
 	TickType_t xLastWakeTime;
 	const TickType_t xPeriod = 500 / portTICK_PERIOD_MS;
+
 	/* Infinite loop */
 	for (;;) {
 		xLastWakeTime = xTaskGetTickCount();
+
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 		vTaskDelayUntil(&xLastWakeTime, xPeriod);
 	}
@@ -264,6 +278,53 @@ void StartUARTtask(void *argument)
   /* USER CODE END StartUARTtask */
 }
 
+/* USER CODE BEGIN Header_StartEncoder */
+/**
+* @brief Function implementing the Encoder thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartEncoder */
+void StartEncoder(void *argument)
+{
+  /* USER CODE BEGIN StartEncoder */
+
+	static bool invert = false;
+	static bool released = true;
+
+  osDelay(200);
+  uint8_t data;
+
+  /* Infinite loop */
+  for(;;)
+  {
+
+	  if (HAL_GPIO_ReadPin(enc_s_GPIO_Port, enc_s_Pin))
+	  {
+		  released = true;
+	  } else if (released)
+	  {
+		  released = false;
+		  invert = !invert;
+	  }
+
+	  data = 0b01000001; // command 2, write to LED port
+	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+	  osDelay(10);
+
+	  data = ~(1<<((encoder_value >> 2)&0b11));
+	  if (invert)
+		  data =~data;
+
+	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+
+	  osDelay(10);
+  }
+  /* USER CODE END StartEncoder */
+}
+
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -289,8 +350,8 @@ void process_encoder(void)
 {
 	static uint8_t old;
 	uint8_t new;
-	new = (0b10*HAL_GPIO_ReadPin(enc_a_GPIO_Port, enc_a_Pin) +
-		   0b01*HAL_GPIO_ReadPin(enc_b_GPIO_Port, enc_b_Pin));
+	new = (0b01*HAL_GPIO_ReadPin(enc_a_GPIO_Port, enc_a_Pin) +
+		   0b10*HAL_GPIO_ReadPin(enc_b_GPIO_Port, enc_b_Pin));
 	switch(old)
 		{
 		case 2:

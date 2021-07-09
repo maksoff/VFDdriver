@@ -18,4 +18,4 @@ microrl_cmd.c:470:5:nema_toggle	16	static
 microrl_cmd.c:476:5:nema_on	16	static
 microrl_cmd.c:484:5:nema_off	16	static
 microrl_cmd.c:493:5:show_encoder	32	static
-microrl_cmd.c:511:6:get_nema	4	static
+microrl_cmd.c:512:6:get_nema	4	static

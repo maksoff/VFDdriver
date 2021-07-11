@@ -3,6 +3,6 @@ freertos.c:176:6:StartDefaultTask	16	static
 freertos.c:206:6:StartLEDheartbeat	24	static
 freertos.c:229:6:StartUSB_rcv	32	static
 freertos.c:262:6:StartUARTtask	24	static
-freertos.c:288:6:StartEncoder	64	static
-freertos.c:394:6:HAL_UART_RxCpltCallback	24	static,ignoring_inline_asm
-freertos.c:413:6:process_encoder	24	static
+freertos.c:288:6:StartEncoder	136	static
+freertos.c:516:6:HAL_UART_RxCpltCallback	24	static,ignoring_inline_asm
+freertos.c:535:6:process_encoder	24	static

@@ -292,9 +292,10 @@ void StartEncoder(void *argument)
 	static bool invert = true;
 	static bool released = true;
 
+
+  osDelay(500);
   HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
 
-  osDelay(200);
   union VFD {
 	  uint8_t arr2[11][3];
 	  uint8_t arr1[11*3];
@@ -306,13 +307,6 @@ void StartEncoder(void *argument)
   }
   uint8_t data;
 
-  // init display, 11 digits 17 segments
-  data = 0b00000111; // command 1, 11 digits 17 segments
-  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-  osDelay(10);
-
 
   data = 0b01000000; // command 2, write to Display port
   HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
@@ -322,16 +316,16 @@ void StartEncoder(void *argument)
   data = 0b11000000; // command 3, set address to 0
   HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
   HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-
-
   HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-
-//  for (uint8_t i = 0; i < sizeof(vfd.arr1); i++)
-//  {
-//	  osDelay(10);
-//  }
   HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
   osDelay(10);
+  // init display, 11 digits 17 segments
+  data = 0b00000111; // command 1, 11 digits 17 segments
+  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+  osDelay(10);
+
 
   data = 0b10000000; // command 4
   data |= 1<<3; // enable/disable display
@@ -341,33 +335,6 @@ void StartEncoder(void *argument)
   HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
   osDelay(10);
 
-//  data = 0b11000000; // command 3, set address to 0
-//  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-//  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-//
-//
-//  for (uint8_t i = 0; i < sizeof(vfd.arr1); i++)
-//  {
-//	  vfd.arr1[i] = 0xaa;
-//  }
-//
-//  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-//  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-//  osDelay(1000);
-//
-//  data = 0b11000000; // command 3, set address to 0
-//  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-//  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-//
-//
-//  for (uint8_t i = 0; i < sizeof(vfd.arr1); i++)
-//  {
-//	  vfd.arr1[i] = 0x55;
-//  }
-//
-//  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-//  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-//  osDelay(1000);
 
 
   for (int i = 0; i < 11; i++)
@@ -385,45 +352,20 @@ void StartEncoder(void *argument)
 	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
 	  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
 	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	  osDelay(200);
+	  osDelay(150);
   }
 
-  osDelay(500);
 
-  for (int j = 0; j < 17; j++)
+
+  for (int j = 17; j >= 0; j--)
   {
-	  uint32_t temp = 1<<j;
-	  for (int i = 0; i < 11; i++)
-	  {
-		  for (int a = 0; a < sizeof(vfd.arr1); a++)
-			  vfd.arr1[a] = 0;
-		  for (int b = 0; b < 3; b++)
-		  {
-			  vfd.arr2[i][b] = (temp>>(b<<3))&0xFF;
-		  }
-		  data = 0b11000000; // command 3, set address to 0
-		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-		  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-		  osDelay(50);
-	  }
-  }
-
-  osDelay(500);
-
-  osDelay(500);
-
-  for (int j = 0; j < 17; j++)
-  {
-	  uint32_t temp = 1<<j;
 	  for (int a = 0; a < sizeof(vfd.arr1); a++)
 		  vfd.arr1[a] = 0;
 	  for (int i = 0; i < 11; i++)
 	  {
 		  for (int b = 0; b < 3; b++)
 		  {
-			  vfd.arr2[i][b] = (temp>>(b<<3))&0xFF;
+			  vfd.arr2[i][b] = j ? ((1<<(j-1))>>(b<<3))&0xFF : 0x00;
 		  }
 
 

@@ -30,6 +30,7 @@
 #include "microrl_cmd.h"
 #include "usart.h"
 #include "spi.h"
+#include "vfd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -92,6 +93,11 @@ osMessageQueueId_t qUSB_rcvHandle;
 const osMessageQueueAttr_t qUSB_rcv_attributes = {
   .name = "qUSB_rcv"
 };
+/* Definitions for qVFD */
+osMessageQueueId_t qVFDHandle;
+const osMessageQueueAttr_t qVFD_attributes = {
+  .name = "qVFD"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -132,7 +138,10 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the queue(s) */
   /* creation of qUSB_rcv */
-  qUSB_rcvHandle = osMessageQueueNew (64, sizeof(uint8_t), &qUSB_rcv_attributes);
+  qUSB_rcvHandle = osMessageQueueNew (32, sizeof(uint8_t), &qUSB_rcv_attributes);
+
+  /* creation of qVFD */
+  qVFDHandle = osMessageQueueNew (16, sizeof(uint16_t), &qVFD_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -214,7 +223,20 @@ void StartLEDheartbeat(void *argument)
 		xLastWakeTime = xTaskGetTickCount();
 
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+
+		if (xTaskGetTickCount() > 10000)
+		{
+				static uint8_t cnt = 0;
+				if (cnt < DIGITS)
+					xQueueSendToBack(qVFDHandle, &vfd_digits[cnt], 10);
+				else
+					xQueueSendToBack(qVFDHandle, &vfd_alpha[cnt-DIGITS], 10);
+				if (++cnt >= ALPHAS + DIGITS)
+					cnt = 0;
+		}
+
 		vTaskDelayUntil(&xLastWakeTime, xPeriod);
+
 	}
   /* USER CODE END StartLEDheartbeat */
 }
@@ -303,7 +325,7 @@ void StartEncoder(void *argument)
 
   for (int i = 0; i < sizeof(vfd.arr1); i++)
   {
-	  vfd.arr1[i] = 0;
+	  vfd.arr1[i] = 0xFF;
   }
   uint8_t data;
 
@@ -326,27 +348,25 @@ void StartEncoder(void *argument)
   HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
   osDelay(10);
 
-
-  data = 0b10000000; // command 4
-  data |= 1<<3; // enable/disable display
-  data |= 0b111; // set brightness
-  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-  osDelay(10);
+  for (uint8_t i = 0; i <= 0b111; i++)
+  {
+	  data = 0b10000000; // command 4
+	  data |= 1<<3; // enable/disable display
+	  data |= i; // set brightness
+	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	  osDelay(250);
+  }
 
 
 
   for (int i = 0; i < 11; i++)
   {
-	  for (int a = 0; a < sizeof(vfd.arr1); a++)
-	  	  vfd.arr1[a] = 0;
-	  for (int b = 0; b < 3; b++)
+	  for (int b = 0; b < 3; b++) // erasing from right to left
 	  {
-		  vfd.arr2[i][b] = 0xFF;
+		  vfd.arr2[i][b] = 0;
 	  }
-
-
 	  data = 0b11000000; // command 3, set address to 0
 	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
 	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
@@ -354,70 +374,110 @@ void StartEncoder(void *argument)
 	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
 	  osDelay(150);
   }
+  osDelay (500);
 
-
-
-  for (int j = 17; j >= 0; j--)
-  {
-	  for (int a = 0; a < sizeof(vfd.arr1); a++)
-		  vfd.arr1[a] = 0;
-	  for (int i = 0; i < 11; i++)
-	  {
-		  for (int b = 0; b < 3; b++)
-		  {
-			  vfd.arr2[i][b] = j ? ((1<<(j-1))>>(b<<3))&0xFF : 0x00;
-		  }
-
-
-	  }
-	  data = 0b11000000; // command 3, set address to 0
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	  osDelay(200);
-  }
-
-  osDelay(500);
-
+  //erase everything... just in case
   for (int a = 0; a < sizeof(vfd.arr1); a++)
 	  vfd.arr1[a] = 0;
 
-  for (int j = 0; j < 17; j++)
-  {
-	  uint32_t temp = 1<<j;
-	  for (int i = 0; i < 11; i++)
-	  {
-		  for (int b = 0; b < 3; b++)
-		  {
-			  vfd.arr2[i][b] |= (temp>>(b<<3))&0xFF;
-		  }
 
+  // fill everything
+    for (int j = 1; j < 15; j++)
+    {
+  	  uint32_t temp = 1<<j;
+  	  for (int i = 1; i < 11; i++)
+  	  {
+  		  for (int b = 0; b < 3; b++)
+  		  {
+  			  vfd.arr2[i][b] |= (temp>>(b<<3))&0xFF;
+  		  }
+  	  }
+  	  data = 0b11000000; // command 3, set address to 0
+  	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+  	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+  	  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
+  	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+  	  osDelay(100);
+    }
 
-	  }
-	  data = 0b11000000; // command 3, set address to 0
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	  osDelay(150);
-  }
+    const uint8_t arr[][2] = {{6, 0},
+    				   {0, 0},
+					   {0, 1},
+					   {0, 4},
+					   {0, 3},
+					   {0, 5},
+					   {0, 2},
+					   {0, 6},
+					   {1, 16},
+					   {1, 15},
+					   {2, 16},
+					   {2, 15},
+					   {3, 16},
+					   {3, 15},
+					   {4, 16},
+					   {4, 15},
+					   {5, 16},
+					   {5, 15},
+					   {6, 16},
+					   {6, 15},
+					   {8, 16},
+					   {8, 15},
+					   {9, 16},
+					   {10, 16},
+					   {10, 15},
+    };
 
+    for (int j = 0; j < sizeof(arr)/2; j++)
+    {
+		for (int b = 0; b < 3; b++)
+		  vfd.arr2[arr[j][0]][b] |= ((1<<arr[j][1])>>(b<<3))&0xFF;
+		data = 0b11000000; // command 3, set address to 0
+		HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+		HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+		HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
+		HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+		osDelay(100);
+    }
 
+    osDelay(500);
 
+    //erase everything... just in case
+    for (int a = 0; a < sizeof(vfd.arr1); a++)
+  	  vfd.arr1[a] = 0;
 
+//    for (int i = 0; i < sizeof(vfd_digits)/sizeof(vfd_digits[0]); i++)
+//    {
+//        vfd.arr2[i+1][0] = vfd_digits[i]&0xFF;
+//        vfd.arr2[i+1][1] = (vfd_digits[i]>>8)&0xFF;
+//    }
 
-//  data = 0b01000000; // command 2, write to Display port
-//  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-//  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-//  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-//  osDelay(10);
+	data = 0b11000000; // command 3, set address to 0
+	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+	HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
+	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	//osDelay(100);
 
-  // write some data
 
   /* Infinite loop */
   for(;;)
   {
+	  uint16_t buf;
+	  if(qVFDHandle && xQueueReceive(qVFDHandle, &buf, 1))
+	  {
+		    for (int i = 10; i > 1; i--)
+		    {
+				vfd.arr2[i][0] = vfd.arr2[i-1][0];
+				vfd.arr2[i][1] = vfd.arr2[i-1][1];
+		    }
+			vfd.arr2[1][0] = buf & 0xFF;
+			vfd.arr2[1][1] = (buf>>8)&0xFF;
+			data = 0b11000000; // command 3, set address to 0
+			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+			HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+			HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
+			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	  }
 
 	  if (HAL_GPIO_ReadPin(enc_s_GPIO_Port, enc_s_Pin))
 	  {
@@ -444,7 +504,7 @@ void StartEncoder(void *argument)
 	  osDelay(10);
 	  data = 0b10000000; // command 4
 	  data |= invert<<3; // enable/disable display
-	  data |= (encoder_value >> 2)&0b111; // set brightness
+	  data |= ((encoder_value >> 2) - 1)&0b111; // set brightness
 	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
 	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
 	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);

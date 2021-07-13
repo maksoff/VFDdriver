@@ -42,7 +42,8 @@ Core/Src/freertos.o: ../Core/Src/freertos.c \
  ../Core/Inc/freertos_inc.h ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
  ../Core/Inc/microrl_cmd.h ../Core/Inc/microrl.h \
- ../Core/Inc/microrl_config.h ../Core/Inc/usart.h ../Core/Inc/spi.h
+ ../Core/Inc/microrl_config.h ../Core/Inc/usart.h ../Core/Inc/spi.h \
+ ../Core/Inc/vfd.h
 
 ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
 
@@ -141,3 +142,5 @@ Core/Src/freertos.o: ../Core/Src/freertos.c \
 ../Core/Inc/usart.h:
 
 ../Core/Inc/spi.h:
+
+../Core/Inc/vfd.h:

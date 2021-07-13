@@ -57,6 +57,7 @@ const microrl_action_t microrl_actions [] =
 		{   1,		"on",		"turn on",					nema_on},
 		{   1,		"off",		"turn off",					nema_off},
 		{ 0,		"encoder",	"display current value",	show_encoder},
+		{ 0,		"vfd",		"put text on vfd display",	vfd},
 //		{ 0,		"led",		"toggle led",				led_toggle},
 //		{   1,		"on",		"turn on",					led_on},
 //		{   1,		"off",		"turn off",					led_off},
@@ -472,6 +473,20 @@ int nema_off 		(int argc, const char * const * argv)
 	nema_out = 0;
 	print ("NEM output is OFF");
 	print(ENDL);
+	return 0;
+}
+
+int vfd 		(int argc, const char * const * argv)
+{
+	uint32_t dig = 0;
+	char * pchar = argv[1];
+	while (*pchar)
+	{
+		dig *= 10;
+		dig += *(pchar++) - '0';
+	}
+	dig = dig;
+	xQueueSendToBack(qVFDHandle, &dig, 100);
 	return 0;
 }
 

@@ -2,7 +2,7 @@
 Mcu.Family=STM32F1
 ProjectManager.MainLocation=Core/Src
 RCC.MCOFreq_Value=72000000
-FREERTOS.Queues01=qUSB_rcv,64,uint8_t,0,Dynamic,NULL,NULL
+FREERTOS.Queues01=qUSB_rcv,32,uint8_t,0,Dynamic,NULL,NULL;qVFD,16,uint16_t,0,Dynamic,NULL,NULL
 USB_DEVICE.CLASS_NAME_FS=CDC
 USART2.IPParameters=VirtualMode,BaudRate
 ProjectManager.KeepUserCode=true
@@ -87,7 +87,7 @@ ProjectManager.ToolChainLocation=
 SH.GPXTI0.0=GPIO_EXTI0
 NVIC.TimeBaseIP=TIM1
 PB9.GPIO_PuPd=GPIO_PULLUP
-FREERTOS.FootprintOK=false
+FREERTOS.FootprintOK=true
 PA15.Signal=GPIO_Output
 VP_USB_DEVICE_VS_USB_DEVICE_CDC_FS.Signal=USB_DEVICE_VS_USB_DEVICE_CDC_FS
 SPI2.CLKPhase=SPI_PHASE_2EDGE

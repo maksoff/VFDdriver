@@ -487,6 +487,8 @@ int vfd 		(int argc, const char * const * argv)
 	}
 	dig = dig;
 	xQueueSendToBack(qVFDHandle, &dig, 100);
+	xQueueSendToBack(qVFDHandle, &dig, 100);
+	xQueueSendToBack(qVFDHandle, &dig, 100);
 	return 0;
 }
 

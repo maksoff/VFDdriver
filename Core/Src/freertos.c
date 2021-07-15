@@ -224,19 +224,22 @@ void StartLEDheartbeat(void *argument)
 
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 
-		if (xTaskGetTickCount() > 10000)
+		if (0 && xTaskGetTickCount() > 10000)
 		{
 				static uint8_t cnt = 0;
 				const uint16_t temp = 0;
-				if (cnt == DIGITS || (cnt == DIGITS + ALPHAS || cnt == 0 ))
+				if ((cnt == DIGITS || cnt == ALPHAS + DIGITS + ALPHAR)|| (cnt == DIGITS + ALPHAS || cnt == 0 ))
 					xQueueSendToBack(qVFDHandle, &temp, 10);
 				if (cnt < DIGITS)
 					xQueueSendToBack(qVFDHandle, &vfd_digits[cnt], 10);
 				else if (cnt < DIGITS + ALPHAS)
 					xQueueSendToBack(qVFDHandle, &vfd_alpha[cnt-DIGITS], 10);
-				else
+				else if (cnt < DIGITS + ALPHAS + ALPHAR)
 					xQueueSendToBack(qVFDHandle, &vfd_alpha_ru[cnt-DIGITS-ALPHAS], 10);
-				if (++cnt >= ALPHAS + DIGITS + ALPHAR)
+				else
+					xQueueSendToBack(qVFDHandle, &vfd_special[cnt-DIGITS-ALPHAS-ALPHAR], 10);
+
+				if (++cnt >= ALPHAS + DIGITS + ALPHAR + SPECIAL)
 					cnt = 0;
 
 		}

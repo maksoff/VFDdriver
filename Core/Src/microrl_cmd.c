@@ -12,6 +12,8 @@
 #include "usbd_cdc.h"
 #include "freertos_inc.h"
 
+#include "vfd.h"
+
 microrl_t mcrl;
 microrl_t * p_mcrl = &mcrl;
 
@@ -476,19 +478,19 @@ int nema_off 		(int argc, const char * const * argv)
 	return 0;
 }
 
-int vfd 		(int argc, const char * const * argv)
+int vfd (int argc, const char * const * argv)
 {
-	uint32_t dig = 0;
-	char * pchar = argv[1];
-	while (*pchar)
+	for (int i = 1; i < argc; i++)
 	{
-		dig *= 10;
-		dig += *(pchar++) - '0';
+		uint16_t temp = 0;
+		char * pchar = (char*)argv[i];
+		xQueueSendToBack(qVFDHandle, &temp, 100);
+		while (*pchar)
+		{
+			temp = get_char(*(pchar++));
+			xQueueSendToBack(qVFDHandle, &temp, 100);
+		}
 	}
-	dig = dig;
-	xQueueSendToBack(qVFDHandle, &dig, 100);
-	xQueueSendToBack(qVFDHandle, &dig, 100);
-	xQueueSendToBack(qVFDHandle, &dig, 100);
 	return 0;
 }
 

@@ -12,6 +12,8 @@
 #include "usbd_cdc.h"
 #include "freertos_inc.h"
 
+#include "vfd.h"
+
 microrl_t mcrl;
 microrl_t * p_mcrl = &mcrl;
 
@@ -57,6 +59,7 @@ const microrl_action_t microrl_actions [] =
 		{   1,		"on",		"turn on",					nema_on},
 		{   1,		"off",		"turn off",					nema_off},
 		{ 0,		"encoder",	"display current value",	show_encoder},
+		{ 0,		"vfd",		"put text on vfd display",	vfd},
 //		{ 0,		"led",		"toggle led",				led_toggle},
 //		{   1,		"on",		"turn on",					led_on},
 //		{   1,		"off",		"turn off",					led_off},
@@ -472,6 +475,22 @@ int nema_off 		(int argc, const char * const * argv)
 	nema_out = 0;
 	print ("NEM output is OFF");
 	print(ENDL);
+	return 0;
+}
+
+int vfd (int argc, const char * const * argv)
+{
+	for (int i = 1; i < argc; i++)
+	{
+		uint16_t temp = 0;
+		char * pchar = (char*)argv[i];
+		xQueueSendToBack(qVFDHandle, &temp, 100);
+		while (*pchar)
+		{
+			temp = get_char(*(pchar++));
+			xQueueSendToBack(qVFDHandle, &temp, 100);
+		}
+	}
 	return 0;
 }
 

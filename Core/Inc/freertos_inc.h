@@ -15,6 +15,7 @@
 #include "queue.h"
 
 osMessageQueueId_t qUSB_rcvQueue;
+osMessageQueueId_t qVFDHandle;
 
 extern uint16_t encoder_value;
 

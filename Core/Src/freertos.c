@@ -101,6 +101,11 @@ osMessageQueueId_t qVFDHandle;
 const osMessageQueueAttr_t qVFD_attributes = {
   .name = "qVFD"
 };
+/* Definitions for muI2C */
+osMutexId_t muI2CHandle;
+const osMutexAttr_t muI2C_attributes = {
+  .name = "muI2C"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -126,6 +131,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+  /* Create the mutex(es) */
+  /* creation of muI2C */
+  muI2CHandle = osMutexNew(&muI2C_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -481,44 +489,45 @@ void StartEncoder(void *argument)
 
 
   /* Infinite loop */
-  uint16_t old_time = 0xffff;
+  d3231_get_all();
   for(;;)
   {
 	  uint16_t buf;
-	  union uTIME {
-		  uint8_t u8[2];
-		  uint16_t u16;
-	  } time;
-	  HAL_I2C_Mem_Read(&hi2c1, D3231_ADDRESS, 1, 1, time.u8, 2, 7);
 	  if (show_clock)
 	  {
-		  if (old_time != time.u16)
+		  uint8_t * time = d3231_get_time();
+		  uint8_t clock [4];
+		  clock[0] = time[1] & 0xF;
+		  clock[1] = (time[1] >> 4) & 0xF;
+		  clock[2] = time[2] & 0xF;
+		  clock[3] = (time[2] >> 4) & 0xF;
+
+		  //erase everything...
+		  for (int a = 0; a < sizeof(vfd.arr1); a++)
+			  vfd.arr1[a] = 0;
+
+
+		  for (int i = 0; i < 4; i++)
 		  {
-			  old_time = time.u16;
-			  uint8_t clock [4];
-			  clock[0] = time.u8[0] & 0xF;
-			  clock[1] = (time.u8[0] >> 4) & 0xF;
-			  clock[2] = time.u8[1] & 0xF;
-			  clock[3] = (time.u8[1] >> 4) & 0xF;
+			  buf = get_char(clock[i]);
 
-			  //erase everything...
-			  for (int a = 0; a < sizeof(vfd.arr1); a++)
-				  vfd.arr1[a] = 0;
-
-			  for (int i = 0; i < 4; i++)
-			  {
-				  buf = get_char(clock[i]);
-
-				  vfd.arr2[4+i][0] = buf & 0xFF;
-				  vfd.arr2[4+i][1] = (buf>>8)&0xFF;
-					data = 0b11000000; // command 3, set address to 0
-					HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-					HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-					HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-					HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-			  }
-
+			  vfd.arr2[4+i][0] = buf & 0xFF;
+			  vfd.arr2[4+i][1] = (buf>>8)&0xFF;
 		  }
+
+		  if ((time[0]&0b1) == 0)
+		  {
+				for (int b = 0; b < 3; b++)
+				  vfd.arr2[6][b] |= ((1<<0)>>(b<<3))&0xFF;
+		  }
+
+		  data = 0b11000000; // command 3, set address to 0
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+		  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+
+
 	  }
 	  else
 	  {

@@ -89,6 +89,9 @@ int vfd 			(int argc, const char * const * argv);
 
 int show_encoder	(int argc, const char * const * argv);
 
+int set_date		(int argc, const char * const * argv);
+int set_time		(int argc, const char * const * argv);
+
 bool get_nema(void);
 
 extern bool show_clock;

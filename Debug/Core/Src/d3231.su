@@ -1,0 +1,4 @@
+d3231.c:18:11:d3231_get_time	24	static
+d3231.c:26:11:d3231_get_all	24	static
+d3231.c:34:6:d3231_set_time	16	static
+d3231.c:39:6:d3231_set_date	16	static

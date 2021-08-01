@@ -91,6 +91,8 @@ int show_encoder	(int argc, const char * const * argv);
 
 bool get_nema(void);
 
+extern bool show_clock;
+
 //int led_on 			(int argc, const char * const * argv);
 //int led_off 		(int argc, const char * const * argv);
 //int led_toggle 		(int argc, const char * const * argv);

@@ -20,6 +20,7 @@ microrl_t * p_mcrl = &mcrl;
 bool color_out = true;
 bool CDC_is_ready = false;
 bool nema_out = false;
+bool show_clock = true;
 
 /********************************
  *

@@ -1,8 +1,8 @@
-freertos.c:122:6:MX_FREERTOS_Init	8	static
-freertos.c:185:6:StartDefaultTask	16	static
-freertos.c:215:6:StartLEDheartbeat	32	static
-freertos.c:260:6:StartUSB_rcv	32	static
-freertos.c:293:6:StartUARTtask	24	static
-freertos.c:319:6:StartEncoder	168	static
-freertos.c:527:6:HAL_UART_RxCpltCallback	24	static,ignoring_inline_asm
-freertos.c:546:6:process_encoder	24	static
+freertos.c:123:6:MX_FREERTOS_Init	8	static
+freertos.c:186:6:StartDefaultTask	16	static
+freertos.c:216:6:StartLEDheartbeat	32	static
+freertos.c:262:6:StartUSB_rcv	32	static
+freertos.c:295:6:StartUARTtask	24	static
+freertos.c:321:6:StartEncoder	176	static
+freertos.c:537:6:HAL_UART_RxCpltCallback	24	static,ignoring_inline_asm
+freertos.c:556:6:process_encoder	24	static

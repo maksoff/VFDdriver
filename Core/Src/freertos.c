@@ -51,6 +51,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 uint16_t encoder_value = 0;
+uint16_t tick_counter = 0;
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -223,6 +224,7 @@ void StartLEDheartbeat(void *argument)
 		xLastWakeTime = xTaskGetTickCount();
 
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		tick_counter++;
 
 		if (0 && xTaskGetTickCount() > 10000)
 		{
@@ -468,6 +470,14 @@ void StartEncoder(void *argument)
 	//osDelay(100);
 
 
+	const char * demo = "VFD FV651G";
+	while (*demo)
+	{
+		uint16_t temp = get_char(*(demo++));
+		xQueueSendToBack(qVFDHandle, &temp, 100);
+	}
+
+
   /* Infinite loop */
   for(;;)
   {
@@ -502,7 +512,7 @@ void StartEncoder(void *argument)
 	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
 	  osDelay(10);
 
-	  data = ~(1<<((encoder_value >> 2)&0b11));
+	  data = ~(1<<((tick_counter >> 1)&0b11));
 //	  if (invert)
 //		  data =~data;
 	  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, invert);

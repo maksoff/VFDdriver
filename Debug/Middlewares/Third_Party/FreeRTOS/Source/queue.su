@@ -5,8 +5,6 @@ queue.c:408:13:prvInitialiseNewQueue	24	static
 queue.c:452:14:prvInitialiseMutex	16	static
 queue.c:482:16:xQueueCreateMutex	32	static
 queue.c:498:16:xQueueCreateMutexStatic	40	static
-queue.c:518:8:xQueueGetMutexHolder	24	static
-queue.c:548:8:xQueueGetMutexHolderFromISR	24	static,ignoring_inline_asm
 queue.c:574:13:xQueueGiveMutexRecursive	40	static,ignoring_inline_asm
 queue.c:629:13:xQueueTakeMutexRecursive	40	static,ignoring_inline_asm
 queue.c:671:16:xQueueCreateCountingSemaphoreStatic	48	static,ignoring_inline_asm

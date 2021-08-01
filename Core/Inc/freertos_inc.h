@@ -16,6 +16,7 @@
 
 osMessageQueueId_t qUSB_rcvQueue;
 osMessageQueueId_t qVFDHandle;
+osMutexId_t muI2CHandle;
 
 extern uint16_t encoder_value;
 

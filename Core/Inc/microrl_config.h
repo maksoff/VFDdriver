@@ -39,12 +39,12 @@ ESC sequence, it's not possible detect only text length*/
 now if user press TAB calls 'copmlitetion' callback. If you no need it, you can just set 
 NULL to callback ptr and do not use it, but for memory saving tune, 
 if you are not going to use it - disable this define.*/
-#define _USE_COMPLETE
+//#define _USE_COMPLETE
 
 /*Define it, if you wanna use history. It s work's like bash history, and
 set stored value to cmdline, if UP and DOWN key pressed. Using history add
 memory consuming, depends from _RING_HISTORY_LEN parametr */
-#define _USE_HISTORY
+//#define _USE_HISTORY
 
 /*
 History ring buffer length, define static buffer size.

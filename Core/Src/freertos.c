@@ -31,6 +31,8 @@
 #include "usart.h"
 #include "spi.h"
 #include "vfd.h"
+#include "i2c.h"
+#include "d3231.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,6 +53,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 uint16_t encoder_value = 0;
+uint16_t tick_counter = 0;
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -98,6 +101,11 @@ osMessageQueueId_t qVFDHandle;
 const osMessageQueueAttr_t qVFD_attributes = {
   .name = "qVFD"
 };
+/* Definitions for muI2C */
+osMutexId_t muI2CHandle;
+const osMutexAttr_t muI2C_attributes = {
+  .name = "muI2C"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -123,6 +131,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+  /* Create the mutex(es) */
+  /* creation of muI2C */
+  muI2CHandle = osMutexNew(&muI2C_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -223,26 +234,7 @@ void StartLEDheartbeat(void *argument)
 		xLastWakeTime = xTaskGetTickCount();
 
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-
-		if (0 && xTaskGetTickCount() > 10000)
-		{
-				static uint8_t cnt = 0;
-				const uint16_t temp = 0;
-				if ((cnt == DIGITS || cnt == ALPHAS + DIGITS + ALPHAR)|| (cnt == DIGITS + ALPHAS || cnt == 0 ))
-					xQueueSendToBack(qVFDHandle, &temp, 10);
-				if (cnt < DIGITS)
-					xQueueSendToBack(qVFDHandle, &vfd_digits[cnt], 10);
-				else if (cnt < DIGITS + ALPHAS)
-					xQueueSendToBack(qVFDHandle, &vfd_alpha[cnt-DIGITS], 10);
-				else if (cnt < DIGITS + ALPHAS + ALPHAR)
-					xQueueSendToBack(qVFDHandle, &vfd_alpha_ru[cnt-DIGITS-ALPHAS], 10);
-				else
-					xQueueSendToBack(qVFDHandle, &vfd_special[cnt-DIGITS-ALPHAS-ALPHAR], 10);
-
-				if (++cnt >= ALPHAS + DIGITS + ALPHAR + SPECIAL)
-					cnt = 0;
-
-		}
+		tick_counter++;
 
 		vTaskDelayUntil(&xLastWakeTime, xPeriod);
 
@@ -468,24 +460,72 @@ void StartEncoder(void *argument)
 	//osDelay(100);
 
 
+	const char * demo = "VFD FV651G";
+	while (*demo)
+	{
+		uint16_t temp = get_char(*(demo++));
+		xQueueSendToBack(qVFDHandle, &temp, 100);
+	}
+
+
   /* Infinite loop */
+ // d3231_get_all();
   for(;;)
   {
 	  uint16_t buf;
-	  if(qVFDHandle && xQueueReceive(qVFDHandle, &buf, 1))
+	  if (show_clock)
 	  {
-		    for (int i = 10; i > 1; i--)
-		    {
-				vfd.arr2[i][0] = vfd.arr2[i-1][0];
-				vfd.arr2[i][1] = vfd.arr2[i-1][1];
-		    }
-			vfd.arr2[1][0] = buf & 0xFF;
-			vfd.arr2[1][1] = (buf>>8)&0xFF;
-			data = 0b11000000; // command 3, set address to 0
-			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-			HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-			HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-			HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+		  uint8_t * time = d3231_get_time();
+		  uint8_t clock [4];
+		  clock[0] = time[1] & 0xF;
+		  clock[1] = (time[1] >> 4) & 0xF;
+		  clock[2] = time[2] & 0xF;
+		  clock[3] = (time[2] >> 4) & 0xF;
+
+		  //erase everything...
+		  for (int a = 0; a < sizeof(vfd.arr1); a++)
+			  vfd.arr1[a] = 0;
+
+
+		  for (int i = 0; i < 4; i++)
+		  {
+			  buf = get_char(clock[i]);
+
+			  vfd.arr2[4+i][0] = buf & 0xFF;
+			  vfd.arr2[4+i][1] = (buf>>8)&0xFF;
+		  }
+
+		  if ((time[0]&0b1) == 0)
+		  {
+				for (int b = 0; b < 3; b++)
+				  vfd.arr2[6][b] |= ((1<<0)>>(b<<3))&0xFF;
+		  }
+
+		  data = 0b11000000; // command 3, set address to 0
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+		  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+
+
+	  }
+	  else
+	  {
+		  if(qVFDHandle && xQueueReceive(qVFDHandle, &buf, 1))
+		  {
+				for (int i = 10; i > 1; i--)
+				{
+					vfd.arr2[i][0] = vfd.arr2[i-1][0];
+					vfd.arr2[i][1] = vfd.arr2[i-1][1];
+				}
+				vfd.arr2[1][0] = buf & 0xFF;
+				vfd.arr2[1][1] = (buf>>8)&0xFF;
+				data = 0b11000000; // command 3, set address to 0
+				HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+				HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+				HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
+				HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+		  }
 	  }
 
 	  if (HAL_GPIO_ReadPin(enc_s_GPIO_Port, enc_s_Pin))
@@ -502,7 +542,7 @@ void StartEncoder(void *argument)
 	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
 	  osDelay(10);
 
-	  data = ~(1<<((encoder_value >> 2)&0b11));
+	  data = ~(1<<((tick_counter >> 1)&0b11));
 //	  if (invert)
 //		  data =~data;
 	  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, invert);

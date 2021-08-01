@@ -6,9 +6,6 @@ tasks.c:1106:7:vTaskDelete	24	static,ignoring_inline_asm
 tasks.c:1198:7:vTaskDelayUntil	48	static,ignoring_inline_asm
 tasks.c:1282:7:vTaskDelay	24	static,ignoring_inline_asm
 tasks.c:1327:13:eTaskGetState	32	static,ignoring_inline_asm
-tasks.c:1398:14:uxTaskPriorityGet	24	static
-tasks.c:1420:14:uxTaskPriorityGetFromISR	40	static,ignoring_inline_asm
-tasks.c:1460:7:vTaskPrioritySet	40	static,ignoring_inline_asm
 tasks.c:1624:7:vTaskSuspend	24	static,ignoring_inline_asm
 tasks.c:1725:20:prvTaskIsTaskSuspended	32	static,ignoring_inline_asm
 tasks.c:1771:7:vTaskResume	24	static,ignoring_inline_asm

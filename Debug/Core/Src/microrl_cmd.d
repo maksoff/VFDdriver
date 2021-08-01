@@ -53,7 +53,7 @@ Core/Src/microrl_cmd.o: ../Core/Src/microrl_cmd.c ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
- ../Core/Inc/vfd.h
+ ../Core/Inc/vfd.h ../Core/Inc/d3231.h
 
 ../Core/Inc/main.h:
 
@@ -172,3 +172,5 @@ Core/Src/microrl_cmd.o: ../Core/Src/microrl_cmd.c ../Core/Inc/main.h \
 ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h:
 
 ../Core/Inc/vfd.h:
+
+../Core/Inc/d3231.h:

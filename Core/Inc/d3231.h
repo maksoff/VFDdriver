@@ -10,9 +10,8 @@
 
 #include "main.h"
 uint8_t * d3231_get_time(void);
-uint8_t * d3231_get_all(void);
+//uint8_t * d3231_get_all(void);
 
-void d3231_set_time(uint8_t * time);
-void d3231_set_date(uint8_t * date);
+void d3231_set(uint8_t * arr, bool date);
 
 #endif /* INC_D3231_H_ */

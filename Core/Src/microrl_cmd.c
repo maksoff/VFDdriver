@@ -13,6 +13,7 @@
 #include "freertos_inc.h"
 
 #include "vfd.h"
+#include "d3231.h"
 
 microrl_t mcrl;
 microrl_t * p_mcrl = &mcrl;
@@ -49,7 +50,7 @@ const microrl_action_t microrl_actions [] =
 		{ 0, 		"help", 	"this message", 			print_help},
 		{-1,		"h", 		"", 						NULL},
 		{-1,		"?", 		"", 						NULL},
-		{ 0,		"color",	"toggle color and escape characters",		color_toggle},
+		{ 0,		"color",	"toggle spec characters",	color_toggle},
 		{   1,		"on",		"turn on",					color_on},
 		{   1,		"off",		"turn off",					color_off},
 		{   1,		"show", 	"show color",				color_show},
@@ -57,10 +58,10 @@ const microrl_action_t microrl_actions [] =
 		{-1,		"clr", 		"", 						NULL},
 		{-1,		"clrscr",	"", 						NULL},
 		{ 0,		"nema",		"toggle NEMA debug",		nema_toggle},
-		{   1,		"on",		"turn on",					nema_on},
-		{   1,		"off",		"turn off",					nema_off},
-		{ 0,		"encoder",	"display current value",	show_encoder},
 		{ 0,		"vfd",		"put text on vfd display",	vfd},
+		{ 0,		"set",		"print time",				NULL},
+		{   1,		"time",		"time set hhmmss",			set_td},
+		{   1,		"date",		"date set yymmdd",			set_td},
 //		{ 0,		"led",		"toggle led",				led_toggle},
 //		{   1,		"on",		"turn on",					led_on},
 //		{   1,		"off",		"turn off",					led_off},
@@ -386,7 +387,7 @@ void sigint (void)
 {
 	//TODO add functions
 	nema_out = false;
-
+	show_clock = true;
 
 	print (ENDL);
 	print ("^C catched!");
@@ -466,7 +467,6 @@ int nema_toggle 	(int argc, const char * const * argv)
 int nema_on 		(int argc, const char * const * argv)
 {
 	nema_out = 1;
-	print_color ("NEMA output is ON", C_GREEN);
 	print(ENDL);
 	return 0;
 }
@@ -474,13 +474,13 @@ int nema_on 		(int argc, const char * const * argv)
 int nema_off 		(int argc, const char * const * argv)
 {
 	nema_out = 0;
-	print ("NEM output is OFF");
 	print(ENDL);
 	return 0;
 }
 
 int vfd (int argc, const char * const * argv)
 {
+	show_clock = false;
 	for (int i = 1; i < argc; i++)
 	{
 		uint16_t temp = 0;
@@ -518,4 +518,27 @@ int show_encoder (int argc, const char * const * argv)
 bool get_nema(void)
 {
 	return nema_out;
+}
+
+
+
+int set_td		(int argc, const char * const * argv)
+{
+	if (argc == 3 && str_length(argv[2]) == 6)
+	{
+		uint8_t arr [3];
+
+
+			int temp = 6;
+			char * pchar = (char*)argv[2];
+			for (int i = 0; i < 3; i++)
+			{
+				arr[2-i] = (argv[2][i*2+1]-'0')+((argv[2][i*2]-'0')<<4);
+			}
+		d3231_set(arr, argv[1][0] == 'd');
+		return 0;
+	}
+	print_color("wrong format", C_RED);
+	print(ENDL);
+	return 0;
 }

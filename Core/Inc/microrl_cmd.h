@@ -89,8 +89,7 @@ int vfd 			(int argc, const char * const * argv);
 
 int show_encoder	(int argc, const char * const * argv);
 
-int set_date		(int argc, const char * const * argv);
-int set_time		(int argc, const char * const * argv);
+int set_td		(int argc, const char * const * argv);
 
 bool get_nema(void);
 
@@ -113,8 +112,8 @@ extern bool show_clock;
 
 #define EMPTY_CMD_HELP "[]"
 
-#define MICRORL_CMD_LENGTH (10)
-#define MICRORL_HELP_MSG_LENGTH (44)
+#define MICRORL_CMD_LENGTH (9)
+#define MICRORL_HELP_MSG_LENGTH (26)
 
 typedef struct{
 	int level;									// 0: top, 1: next, 2: next next; -1: same functions as above

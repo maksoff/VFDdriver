@@ -62,6 +62,7 @@ const microrl_action_t microrl_actions [] =
 		{ 0,		"leds",		"toggle LEDs",				leds_toggle},
 		{ 0,		"temp",		"read temperature",			get_temp},
 		{ 0,		"vfd",		"put text on vfd display",	vfd},
+		{ 0,		"clock",	"displays clock (or Ctrl+C)",	clock},
 		{ 0,		"time",		"print time",				get_td},
 		{   1,		"set",		"time set hhmmss",			set_td},
 		{ 0,		"date",		"print date",				get_td},
@@ -605,5 +606,11 @@ int get_temp		(int argc, const char * const * argv)
 	}
 	print_color(str, C_GREEN);
 	print(ENDL);
+	return 0;
+}
+
+int clock		(int argc, const char * const * argv)
+{
+	show_clock = true;
 	return 0;
 }

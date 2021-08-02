@@ -93,6 +93,7 @@ int set_td		(int argc, const char * const * argv);
 int get_td		(int argc, const char * const * argv);
 int get_temp		(int argc, const char * const * argv);
 int leds_toggle		(int argc, const char * const * argv);
+int clock		(int argc, const char * const * argv);
 
 bool get_nema(void);
 

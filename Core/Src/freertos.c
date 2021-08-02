@@ -447,8 +447,18 @@ void StartEncoder(void *argument)
 	}
 
 
-  /* Infinite loop */
   d3231_get_all();
+
+  uint8_t brightness = 0b111-d3231_get_A2M2(); // alarm2 minutes as EEPROM, default max
+
+  data = 0b10000000; // command 4
+  data |= 1<<3; // enable/disable display
+  data |= brightness&0b111; // set brightness
+  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+
+  /* Infinite loop */
   for(;;)
   {
 	  uint16_t buf;
@@ -487,6 +497,25 @@ void StartEncoder(void *argument)
 		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
 		  osDelay(3000);
 	  }
+
+	  // tune brightness
+	  if (HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin))
+	  {
+		  brightness = (--brightness)&0b111;
+		  d3231_set_A2M2(0b111-brightness);
+
+		  data = 0b10000000; // command 4
+		  data |= 1<<3; // enable/disable display
+		  data |= brightness&0b111; // set brightness
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+		  // todo display BRIGHTNESS and scale
+		  osDelay(20);
+		  while(HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin)); // wait release
+		  osDelay(20);
+	  }
+
 	  if (show_clock)
 	  {
 		  uint8_t * time = d3231_get_time();

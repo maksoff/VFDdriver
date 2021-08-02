@@ -22,6 +22,7 @@ bool color_out = true;
 bool CDC_is_ready = false;
 bool nema_out = false;
 bool show_clock = true;
+bool use_leds = USE_LEDS;
 
 /********************************
  *
@@ -57,11 +58,15 @@ const microrl_action_t microrl_actions [] =
 		{ 0,		"clear", 	"clear screen", 			clear_screen},
 		{-1,		"clr", 		"", 						NULL},
 		{-1,		"clrscr",	"", 						NULL},
-		{ 0,		"nema",		"toggle NEMA debug",		nema_toggle},
+//		{ 0,		"nema",		"toggle NEMA debug",		nema_toggle},
+		{ 0,		"leds",		"toggle LEDs",				leds_toggle},
+		{ 0,		"temp",		"read temperature",			get_temp},
 		{ 0,		"vfd",		"put text on vfd display",	vfd},
-		{ 0,		"set",		"print time",				NULL},
-		{   1,		"time",		"time set hhmmss",			set_td},
-		{   1,		"date",		"date set yymmdd",			set_td},
+		{ 0,		"time",		"print time",				get_td},
+		{   1,		"set",		"time set hhmmss",			set_td},
+		{ 0,		"date",		"print date",				get_td},
+		{   1,		"set",		"date set yymmdd",			set_td},
+		{ 0,		"temp",		"read temperature",			get_temp},
 //		{ 0,		"led",		"toggle led",				led_toggle},
 //		{   1,		"on",		"turn on",					led_on},
 //		{   1,		"off",		"turn off",					led_off},
@@ -521,24 +526,84 @@ bool get_nema(void)
 }
 
 
+int leds_toggle		(int argc, const char * const * argv)
+{
+	use_leds ^= 1;
+	print_color("Done", C_GREEN);
+	print(ENDL);
+	return 0;
+}
+
+
 
 int set_td		(int argc, const char * const * argv)
 {
 	if (argc == 3 && str_length(argv[2]) == 6)
 	{
 		uint8_t arr [3];
-
-
-			int temp = 6;
-			char * pchar = (char*)argv[2];
-			for (int i = 0; i < 3; i++)
-			{
-				arr[2-i] = (argv[2][i*2+1]-'0')+((argv[2][i*2]-'0')<<4);
-			}
-		d3231_set(arr, argv[1][0] == 'd');
+		for (int i = 0; i < 3; i++)
+		{
+			arr[2-i] = (argv[2][i*2+1]-'0')+((argv[2][i*2]-'0')<<4);
+		}
+		d3231_set(arr, argv[0][0] == 'd');
 		return 0;
 	}
 	print_color("wrong format", C_RED);
+	print(ENDL);
+	return 0;
+}
+
+int get_td		(int argc, const char * const * argv)
+{
+	bool date = argv[0][0] == 'd';
+	char str[9];
+	uint8_t * d3231 = d3231_get_all();
+	uint8_t offset = date*4;
+	str[8] = '\0';
+	str[7] = (d3231[offset + 0]&0xF) + '0';
+	str[6] = ((d3231[offset + 0]>>4)&0xF) + '0';
+	str[4] = (d3231[offset + 1]&0xF) + '0';
+	str[3] = ((d3231[offset + 1]>>4)&0xF) + '0';
+	str[1] = (d3231[offset + 2]&0xF) + '0';
+	str[0] = ((d3231[offset + 2]>>4)&0xF) + '0';
+	str[5] = str[2] = date?'-':':';
+	print_color(str, C_L_BLUE);
+	print(ENDL);
+	return 0;
+}
+
+int get_temp		(int argc, const char * const * argv)
+{
+	uint8_t * d3231 = d3231_get_temp();
+
+	bool negative = d3231[0]&(1<<7);
+	uint16_t temp = d3231[0]&(~(1<<7));
+	uint8_t dec   = d3231[1]>>6;
+
+	dec *= 25; // calculate decimal part
+	temp *= 1000;
+	temp += dec;
+
+
+	char str[8];
+	str[7] = '\0';
+	for (int i = 6; i >= 0; i--)
+	{
+		str[i] = (temp % 10) + '0';
+		temp /= 10;
+	}
+	str[4] = '.';
+	for (int i = 0; i < 7; i++)
+	{
+		if (str[i] != '0')
+		{
+			if (i > 0)
+				str[i-1] = negative?'-':'+';
+			break;
+		}
+		str[i] = ' ';
+	}
+	print_color(str, C_GREEN);
 	print(ENDL);
 	return 0;
 }

@@ -95,7 +95,12 @@ const uint16_t vfd_special [] = {19970,
 								1056,
 								576,
 								19034,
-								29958};
+								29958,
+								29056,
+								8590,
+								2112,
+								528,
+								1442};
 
 const char vfd_special_char [] = {'!',
 									'?',
@@ -113,7 +118,12 @@ const char vfd_special_char [] = {'!',
 									'|',
 									'\\',
 									'&',
-									'@'};
+									'@',
+									176, // °
+									'd',
+									'<',
+									'>',
+									177}; // ±
 
 const uint8_t DIGITS = (sizeof(vfd_digits)/sizeof(vfd_digits[0]));
 const uint8_t ALPHAS = (sizeof(vfd_alpha)/sizeof(vfd_alpha[0]));
@@ -126,6 +136,9 @@ uint16_t get_char(char input)
 		return vfd_digits[input - '0'];
 	if (0 <= input && input <= 9)
 		return vfd_digits[(uint8_t)input];
+	for (int i = 0; i < sizeof(vfd_special_char)/sizeof(vfd_special_char[0]); i++)
+		if (vfd_special_char[i] == input)
+			return vfd_special[i];
 	if ('a' <= input && input <= 'z')
 		return vfd_alpha[input - 'a'];
 	if ('A' <= input && input <= 'Z')
@@ -134,8 +147,5 @@ uint16_t get_char(char input)
 		return vfd_alpha_ru[input - 192];
 	if (224 <= input && input <= 255)
 		return vfd_alpha_ru[input - 224];
-	for (int i = 0; i < sizeof(vfd_special_char)/sizeof(vfd_special_char[0]); i++)
-		if (vfd_special_char[i] == input)
-			return vfd_special[i];
 	return 0;
 }

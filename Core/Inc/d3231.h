@@ -10,7 +10,8 @@
 
 #include "main.h"
 uint8_t * d3231_get_time(void);
-//uint8_t * d3231_get_all(void);
+uint8_t * d3231_get_all(void);
+uint8_t * d3231_get_temp(void);
 
 void d3231_set(uint8_t * arr, bool date);
 

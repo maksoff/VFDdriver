@@ -90,10 +90,14 @@ int vfd 			(int argc, const char * const * argv);
 int show_encoder	(int argc, const char * const * argv);
 
 int set_td		(int argc, const char * const * argv);
+int get_td		(int argc, const char * const * argv);
+int get_temp		(int argc, const char * const * argv);
+int leds_toggle		(int argc, const char * const * argv);
 
 bool get_nema(void);
 
 extern bool show_clock;
+extern bool use_leds;
 
 //int led_on 			(int argc, const char * const * argv);
 //int led_off 		(int argc, const char * const * argv);

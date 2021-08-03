@@ -28,7 +28,6 @@
 /* USER CODE BEGIN Includes */
 #include "freertos_inc.h"
 #include "microrl_cmd.h"
-#include "usart.h"
 #include "spi.h"
 #include "vfd.h"
 #include "i2c.h"
@@ -77,13 +76,6 @@ const osThreadAttr_t taskUSB_rcv_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for UARTtask */
-osThreadId_t UARTtaskHandle;
-const osThreadAttr_t UARTtask_attributes = {
-  .name = "UARTtask",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
 /* Definitions for Encoder */
 osThreadId_t EncoderHandle;
 const osThreadAttr_t Encoder_attributes = {
@@ -109,14 +101,15 @@ const osMutexAttr_t muI2C_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
+#if USE_ENCODER
 void process_encoder(void);
+#endif
 
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
 void StartLEDheartbeat(void *argument);
 void StartUSB_rcv(void *argument);
-void StartUARTtask(void *argument);
 void StartEncoder(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
@@ -168,9 +161,6 @@ void MX_FREERTOS_Init(void) {
   /* creation of taskUSB_rcv */
   taskUSB_rcvHandle = osThreadNew(StartUSB_rcv, NULL, &taskUSB_rcv_attributes);
 
-  /* creation of UARTtask */
-  UARTtaskHandle = osThreadNew(StartUARTtask, NULL, &UARTtask_attributes);
-
   /* creation of Encoder */
   EncoderHandle = osThreadNew(StartEncoder, NULL, &Encoder_attributes);
 
@@ -210,7 +200,9 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
+#if USE_ENCODER
     process_encoder();
+#endif
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
@@ -228,12 +220,15 @@ void StartLEDheartbeat(void *argument)
   /* USER CODE BEGIN StartLEDheartbeat */
 	TickType_t xLastWakeTime;
 	const TickType_t xPeriod = 500 / portTICK_PERIOD_MS;
-
 	/* Infinite loop */
 	for (;;) {
 		xLastWakeTime = xTaskGetTickCount();
 
-		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		if (use_leds)
+			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		else
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
+
 		tick_counter++;
 
 		vTaskDelayUntil(&xLastWakeTime, xPeriod);
@@ -275,32 +270,6 @@ void StartUSB_rcv(void *argument)
   /* USER CODE END StartUSB_rcv */
 }
 
-/* USER CODE BEGIN Header_StartUARTtask */
-/**
-* @brief Function implementing the UARTtask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartUARTtask */
-void StartUARTtask(void *argument)
-{
-  /* USER CODE BEGIN StartUARTtask */
-  /* Infinite loop */
-
-  uint8_t data;
-  for(;;)
-  {
-	HAL_UART_Receive_IT(&huart2, &data, 1);
-	/* Wait to be notified of an interrupt. */
-	ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
-	if (get_nema())
-		CDC_Transmit_FS(&data, 1);
-	//xQueueSend(qdebugRTTHandle, &data, portMAX_DELAY);
-    //osDelay(1);
-  }
-  /* USER CODE END StartUARTtask */
-}
-
 /* USER CODE BEGIN Header_StartEncoder */
 /**
 * @brief Function implementing the Encoder thread.
@@ -316,13 +285,20 @@ void StartEncoder(void *argument)
 	static bool released = true;
 
 
+	void vfd_update(void)
+	{
+		uint8_t data = 0b11000000; // command 3, set address to 0
+	    HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+	    HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+	    HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
+	    HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	}
+
+
   osDelay(500);
   HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
 
-  union VFD {
-	  uint8_t arr2[11][3];
-	  uint8_t arr1[11*3];
-  } vfd;
+
 
   for (int i = 0; i < sizeof(vfd.arr1); i++)
   {
@@ -330,17 +306,23 @@ void StartEncoder(void *argument)
   }
   uint8_t data;
 
+  data = 0b01000001; // command 2, write to LED port
+  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+  osDelay(10);
+
+  data = 0b1111; // disable LEDs
+
+  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+
 
   data = 0b01000000; // command 2, write to Display port
   HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
   HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
   HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
   osDelay(10);
-  data = 0b11000000; // command 3, set address to 0
-  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+  vfd_update();
   osDelay(10);
   // init display, 11 digits 17 segments
   data = 0b00000111; // command 1, 11 digits 17 segments
@@ -368,18 +350,13 @@ void StartEncoder(void *argument)
 	  {
 		  vfd.arr2[i][b] = 0;
 	  }
-	  data = 0b11000000; // command 3, set address to 0
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	  vfd_update();
 	  osDelay(150);
   }
   osDelay (500);
 
   //erase everything... just in case
-  for (int a = 0; a < sizeof(vfd.arr1); a++)
-	  vfd.arr1[a] = 0;
+  clr_vfd();
 
 
   // fill everything
@@ -393,11 +370,7 @@ void StartEncoder(void *argument)
   			  vfd.arr2[i][b] |= (temp>>(b<<3))&0xFF;
   		  }
   	  }
-  	  data = 0b11000000; // command 3, set address to 0
-  	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-  	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-  	  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-  	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+  	  vfd_update();
   	  osDelay(100);
     }
 
@@ -432,32 +405,16 @@ void StartEncoder(void *argument)
     {
 		for (int b = 0; b < 3; b++)
 		  vfd.arr2[arr[j][0]][b] |= ((1<<arr[j][1])>>(b<<3))&0xFF;
-		data = 0b11000000; // command 3, set address to 0
-		HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-		HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-		HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-		HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-		osDelay(100);
+		vfd_update();
+		osDelay(70);
     }
 
     osDelay(500);
 
     //erase everything... just in case
-    for (int a = 0; a < sizeof(vfd.arr1); a++)
-  	  vfd.arr1[a] = 0;
+    clr_vfd();
 
-//    for (int i = 0; i < sizeof(vfd_digits)/sizeof(vfd_digits[0]); i++)
-//    {
-//        vfd.arr2[i+1][0] = vfd_digits[i]&0xFF;
-//        vfd.arr2[i+1][1] = (vfd_digits[i]>>8)&0xFF;
-//    }
-
-	data = 0b11000000; // command 3, set address to 0
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	//osDelay(100);
+    vfd_update();
 
 
 	const char * demo = "VFD FV651G";
@@ -468,11 +425,84 @@ void StartEncoder(void *argument)
 	}
 
 
+  d3231_get_all();
+
+  uint8_t brightness = 0b111-d3231_get_A2M2(); // alarm2 minutes as EEPROM, default max
+
+  data = 0b10000000; // command 4
+  data |= 1<<3; // enable/disable display
+  data |= brightness&0b111; // set brightness
+  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+
   /* Infinite loop */
- // d3231_get_all();
   for(;;)
   {
 	  uint16_t buf;
+	  // show temperature
+	  if (HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin))
+	  {
+		  //erase everything...
+		  clr_vfd();
+
+		  uint8_t td3231 = *d3231_get_temp();
+		  uint8_t td [6];
+		  td[0] = 'C';
+		  td[1] = 176; //°
+		  uint8_t i = 2;
+		  while (td3231)
+		  {
+			  td[i++] = td3231 %10;
+			  td3231 /= 10;
+		  }
+		  if (i>2)
+			  td[i] = td3231&(1<<7)?'-':'+';
+
+		  for (int i = 0; i < 6; i++)
+		  {
+			  buf = get_char(td[i]);
+
+			  vfd.arr2[i+1][0] = buf & 0xFF;
+			  vfd.arr2[i+1][1] = (buf>>8)&0xFF;
+		  }
+
+		  vfd_update();
+		  osDelay(20);
+		  while(HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin)); // wait release
+		  osDelay(1000);
+		  show_clock = true;
+	  }
+
+	  // tune brightness
+	  if (HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin))
+	  {
+		  brightness = (brightness - 1)&0b111;
+		  d3231_set_A2M2(0b111-brightness);
+
+		  save_vfd();
+		  clr_vfd();
+		  uint32_t bits = 0;
+		  for (int i = 2; i < 1 + 2 + brightness; i++)
+			  bits |= 1<<i;
+		  symbols_vfd(bits);
+		  str2vfd("brightness");
+		  vfd_update();
+
+		  data = 0b10000000; // command 4
+		  data |= 1<<3; // enable/disable display
+		  data |= brightness&0b111; // set brightness
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+		  // todo display BRIGHTNESS and scale
+		  osDelay(20);
+		  while(HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin)); // wait release
+		  osDelay(100);
+		  restore_vfd();
+		  vfd_update();
+	  }
+
 	  if (show_clock)
 	  {
 		  uint8_t * time = d3231_get_time();
@@ -483,8 +513,7 @@ void StartEncoder(void *argument)
 		  clock[3] = (time[2] >> 4) & 0xF;
 
 		  //erase everything...
-		  for (int a = 0; a < sizeof(vfd.arr1); a++)
-			  vfd.arr1[a] = 0;
+		  clr_vfd();
 
 
 		  for (int i = 0; i < 4; i++)
@@ -501,11 +530,7 @@ void StartEncoder(void *argument)
 				  vfd.arr2[6][b] |= ((1<<0)>>(b<<3))&0xFF;
 		  }
 
-		  data = 0b11000000; // command 3, set address to 0
-		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-		  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+		  vfd_update();
 
 
 	  }
@@ -520,11 +545,7 @@ void StartEncoder(void *argument)
 				}
 				vfd.arr2[1][0] = buf & 0xFF;
 				vfd.arr2[1][1] = (buf>>8)&0xFF;
-				data = 0b11000000; // command 3, set address to 0
-				HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-				HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-				HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-				HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+				vfd_update();
 		  }
 	  }
 
@@ -537,19 +558,23 @@ void StartEncoder(void *argument)
 		  invert = !invert;
 	  }
 
-	  data = 0b01000001; // command 2, write to LED port
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	  osDelay(10);
+	if(use_leds)
+	{
+		  data = 0b01000001; // command 2, write to LED port
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+		  osDelay(10);
 
-	  data = ~(1<<((tick_counter >> 1)&0b11));
-//	  if (invert)
-//		  data =~data;
-	  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, invert);
+		  data = ~(1<<((tick_counter >> 1)&0b11));
+	//	  if (invert)
+	//		  data =~data;
+		  HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, invert);
 
-	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	}
 
+#if USE_ENCODER
 	  osDelay(10);
 	  data = 0b10000000; // command 4
 	  data |= invert<<3; // enable/disable display
@@ -557,6 +582,7 @@ void StartEncoder(void *argument)
 	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
 	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
 	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+#endif
 	  osDelay(10);
   }
   /* USER CODE END StartEncoder */
@@ -564,25 +590,8 @@ void StartEncoder(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	if (huart != &huart2)
-		return;
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-
-   /* Notify the task that the transmission is complete by setting the TX_BIT
-   in the task's notification value. */
-	vTaskNotifyGiveFromISR( UARTtaskHandle,
-					   &xHigherPriorityTaskWoken );
-
-   /* If xHigherPriorityTaskWoken is now set to pdTRUE then a context switch
-   should be performed to ensure the interrupt returns directly to the highest
-   priority task.  The macro used for this purpose is dependent on the port in
-   use and may be called portEND_SWITCHING_ISR(). */
-   portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-}
-
+#if USE_ENCODER
 void process_encoder(void)
 {
 	static uint8_t old;
@@ -619,6 +628,7 @@ void process_encoder(void)
 		}
 	old = new;
 }
+#endif
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

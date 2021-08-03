@@ -7,6 +7,10 @@
 
 #include "main.h"
 #include "vfd.h"
+
+
+
+
 const uint16_t vfd_digits [] = {28686,
 								10248,
 								24966,
@@ -95,7 +99,12 @@ const uint16_t vfd_special [] = {19970,
 								1056,
 								576,
 								19034,
-								29958};
+								29958,
+								29056,
+								8590,
+								2112,
+								528,
+								1442};
 
 const char vfd_special_char [] = {'!',
 									'?',
@@ -113,7 +122,40 @@ const char vfd_special_char [] = {'!',
 									'|',
 									'\\',
 									'&',
-									'@'};
+									'@',
+									176, // °
+									'd',
+									'<',
+									'>',
+									177}; // ±
+
+const uint8_t vfd_symbols [][2] = {  {1, 16}, // 00 // right <
+							   {1, 15}, // right <<
+							   {2, 16},
+							   {2, 15},
+							   {3, 16},
+							   {3, 15},
+							   {4, 16},
+							   {4, 15},
+							   {5, 16},
+							   {5, 15},
+							   {6, 16},
+							   {6, 15}, // 11 // most left bars
+							{8, 16},	//  c
+							{8, 15},	// b
+							{9, 16},	// dolby
+							{10, 16}, 	// >
+							{10, 15},	// <
+		    				   {0, 0}, // digital
+							   {0, 1}, // analog
+							   {0, 4}, // )
+							   {0, 3}, // (
+							   {0, 5}, // <-
+							   {0, 2}, // ->
+							   {0, 6}, // dcc
+
+							   {6, 0}, // :
+};
 
 const uint8_t DIGITS = (sizeof(vfd_digits)/sizeof(vfd_digits[0]));
 const uint8_t ALPHAS = (sizeof(vfd_alpha)/sizeof(vfd_alpha[0]));
@@ -126,6 +168,9 @@ uint16_t get_char(char input)
 		return vfd_digits[input - '0'];
 	if (0 <= input && input <= 9)
 		return vfd_digits[(uint8_t)input];
+	for (int i = 0; i < sizeof(vfd_special_char)/sizeof(vfd_special_char[0]); i++)
+		if (vfd_special_char[i] == input)
+			return vfd_special[i];
 	if ('a' <= input && input <= 'z')
 		return vfd_alpha[input - 'a'];
 	if ('A' <= input && input <= 'Z')
@@ -134,8 +179,64 @@ uint16_t get_char(char input)
 		return vfd_alpha_ru[input - 192];
 	if (224 <= input && input <= 255)
 		return vfd_alpha_ru[input - 224];
-	for (int i = 0; i < sizeof(vfd_special_char)/sizeof(vfd_special_char[0]); i++)
-		if (vfd_special_char[i] == input)
-			return vfd_special[i];
 	return 0;
+}
+
+void str2vfd(char * str)
+{
+	uint16_t buf;
+	// erase letters only
+	for (int i = 10; i > 0; i --)
+	{
+		 vfd.arr2[i][0] &= 1<<0;
+		 vfd.arr2[i][1] &= 1<<7;
+	}
+	uint8_t i = 10;
+	while (*str)
+	{
+		 buf = get_char(*(str++));
+		 vfd.arr2[i][0] |= buf & (~(1<<0));
+		 vfd.arr2[i][1] |= (buf>>8)&(~(1<<7));
+		 if (!--i)
+			 break;
+	}
+}
+
+void symbols_vfd(uint32_t symbols)
+{
+	for (int i = 0; i < sizeof(vfd_symbols)/sizeof(vfd_symbols[0]); i++)
+	{
+		if (symbols & (1<<i))
+		{
+			// set symbol
+			for (int b = 0; b < 3; b++)
+			  vfd.arr2[vfd_symbols[i][0]][b] |= ((1<<vfd_symbols[i][1])>>(b<<3))&0xFF;
+		}
+		else
+		{
+			// reset symbol
+			for (int b = 0; b < 3; b++)
+			  vfd.arr2[vfd_symbols[i][0]][b] &= ~(((1<<vfd_symbols[i][1])>>(b<<3))&0xFF);
+		}
+	}
+}
+
+void clr_vfd(void)
+{
+	for (int a = 0; a < sizeof(vfd.arr1); a++)
+		  vfd.arr1[a] = 0;
+}
+
+uint8_t backup[11*3];
+
+void save_vfd(void)
+{
+	for (int i = 0; i < sizeof(backup)/sizeof(backup[0]); i++)
+		backup[i] = vfd.arr1[i];
+}
+
+void restore_vfd(void)
+{
+	for (int i = 0; i < sizeof(backup)/sizeof(backup[0]); i++)
+		vfd.arr1[i] = backup[i];
 }

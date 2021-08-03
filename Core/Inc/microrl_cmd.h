@@ -85,7 +85,7 @@ int nema_toggle 	(int argc, const char * const * argv);
 int nema_on 		(int argc, const char * const * argv);
 int nema_off 		(int argc, const char * const * argv);
 
-int vfd 			(int argc, const char * const * argv);
+int vfd_text 			(int argc, const char * const * argv);
 
 int show_encoder	(int argc, const char * const * argv);
 

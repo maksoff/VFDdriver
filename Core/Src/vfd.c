@@ -7,6 +7,10 @@
 
 #include "main.h"
 #include "vfd.h"
+
+
+
+
 const uint16_t vfd_digits [] = {28686,
 								10248,
 								24966,
@@ -148,4 +152,44 @@ uint16_t get_char(char input)
 	if (224 <= input && input <= 255)
 		return vfd_alpha_ru[input - 224];
 	return 0;
+}
+
+void str2vfd(char * str)
+{
+	uint16_t buf;
+	// erase letters only
+	for (int i = 10; i > 0; i --)
+	{
+		 vfd.arr2[i][0] &= 1<<0;
+		 vfd.arr2[i][1] &= 1<<7;
+	}
+	uint8_t i = 10;
+	while (*str)
+	{
+		 buf = get_char(*(str++));
+		 vfd.arr2[i][0] |= buf & (~(1<<0));
+		 vfd.arr2[i][1] |= (buf>>8)&(~(1<<7));
+		 if (!--i)
+			 break;
+	}
+}
+
+void clr_vfd(void)
+{
+	for (int a = 0; a < sizeof(vfd.arr1); a++)
+		  vfd.arr1[a] = 0;
+}
+
+uint8_t backup[11*3];
+
+void save_vfd(void)
+{
+	for (int i = 0; i < sizeof(backup)/sizeof(backup[0]); i++)
+		backup[i] = vfd.arr1[i];
+}
+
+void restore_vfd(void)
+{
+	for (int i = 0; i < sizeof(backup)/sizeof(backup[0]); i++)
+		vfd.arr1[i] = backup[i];
 }

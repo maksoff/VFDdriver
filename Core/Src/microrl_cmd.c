@@ -61,13 +61,12 @@ const microrl_action_t microrl_actions [] =
 //		{ 0,		"nema",		"toggle NEMA debug",		nema_toggle},
 		{ 0,		"leds",		"toggle LEDs",				leds_toggle},
 		{ 0,		"temp",		"read temperature",			get_temp},
-		{ 0,		"vfd",		"put text on vfd display",	vfd},
+		{ 0,		"vfd",		"put text on vfd display",	vfd_text},
 		{ 0,		"clock",	"displays clock (or Ctrl+C)",	clock},
 		{ 0,		"time",		"print time",				get_td},
 		{   1,		"set",		"time set hhmmss",			set_td},
 		{ 0,		"date",		"print date",				get_td},
 		{   1,		"set",		"date set yymmdd",			set_td},
-		{ 0,		"temp",		"read temperature",			get_temp},
 //		{ 0,		"led",		"toggle led",				led_toggle},
 //		{   1,		"on",		"turn on",					led_on},
 //		{   1,		"off",		"turn off",					led_off},
@@ -484,7 +483,7 @@ int nema_off 		(int argc, const char * const * argv)
 	return 0;
 }
 
-int vfd (int argc, const char * const * argv)
+int vfd_text (int argc, const char * const * argv)
 {
 	show_clock = false;
 	for (int i = 1; i < argc; i++)

@@ -1,1 +1,5 @@
-vfd.c:133:10:get_char	24	static
+vfd.c:137:10:get_char	24	static
+vfd.c:157:6:str2vfd	24	static
+vfd.c:177:6:clr_vfd	16	static
+vfd.c:185:6:save_vfd	16	static
+vfd.c:191:6:restore_vfd	16	static

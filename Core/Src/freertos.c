@@ -285,13 +285,20 @@ void StartEncoder(void *argument)
 	static bool released = true;
 
 
+	void vfd_update(void)
+	{
+		uint8_t data = 0b11000000; // command 3, set address to 0
+	    HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
+	    HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
+	    HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
+	    HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	}
+
+
   osDelay(500);
   HAL_GPIO_WritePin(HV_EN_GPIO_Port, HV_EN_Pin, 1);
 
-  union VFD {
-	  uint8_t arr2[11][3];
-	  uint8_t arr1[11*3];
-  } vfd;
+
 
   for (int i = 0; i < sizeof(vfd.arr1); i++)
   {
@@ -315,11 +322,7 @@ void StartEncoder(void *argument)
   HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
   HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
   osDelay(10);
-  data = 0b11000000; // command 3, set address to 0
-  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+  vfd_update();
   osDelay(10);
   // init display, 11 digits 17 segments
   data = 0b00000111; // command 1, 11 digits 17 segments
@@ -347,18 +350,13 @@ void StartEncoder(void *argument)
 	  {
 		  vfd.arr2[i][b] = 0;
 	  }
-	  data = 0b11000000; // command 3, set address to 0
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+	  vfd_update();
 	  osDelay(150);
   }
   osDelay (500);
 
   //erase everything... just in case
-  for (int a = 0; a < sizeof(vfd.arr1); a++)
-	  vfd.arr1[a] = 0;
+  clr_vfd();
 
 
   // fill everything
@@ -372,11 +370,7 @@ void StartEncoder(void *argument)
   			  vfd.arr2[i][b] |= (temp>>(b<<3))&0xFF;
   		  }
   	  }
-  	  data = 0b11000000; // command 3, set address to 0
-  	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-  	  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-  	  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-  	  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+  	  vfd_update();
   	  osDelay(100);
     }
 
@@ -411,32 +405,16 @@ void StartEncoder(void *argument)
     {
 		for (int b = 0; b < 3; b++)
 		  vfd.arr2[arr[j][0]][b] |= ((1<<arr[j][1])>>(b<<3))&0xFF;
-		data = 0b11000000; // command 3, set address to 0
-		HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-		HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-		HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-		HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+		vfd_update();
 		osDelay(100);
     }
 
     osDelay(500);
 
     //erase everything... just in case
-    for (int a = 0; a < sizeof(vfd.arr1); a++)
-  	  vfd.arr1[a] = 0;
+    clr_vfd();
 
-//    for (int i = 0; i < sizeof(vfd_digits)/sizeof(vfd_digits[0]); i++)
-//    {
-//        vfd.arr2[i+1][0] = vfd_digits[i]&0xFF;
-//        vfd.arr2[i+1][1] = (vfd_digits[i]>>8)&0xFF;
-//    }
-
-	data = 0b11000000; // command 3, set address to 0
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-	HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-	HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-	HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-	//osDelay(100);
+    vfd_update();
 
 
 	const char * demo = "VFD FV651G";
@@ -466,8 +444,7 @@ void StartEncoder(void *argument)
 	  if (HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin))
 	  {
 		  //erase everything...
-		  for (int a = 0; a < sizeof(vfd.arr1); a++)
-			  vfd.arr1[a] = 0;
+		  clr_vfd();
 
 		  uint8_t td3231 = *d3231_get_temp();
 		  uint8_t td [6];
@@ -490,18 +467,21 @@ void StartEncoder(void *argument)
 			  vfd.arr2[i+1][1] = (buf>>8)&0xFF;
 		  }
 
-		  data = 0b11000000; // command 3, set address to 0
-		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-		  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
-		  osDelay(3000);
+		  vfd_update();
+		  osDelay(20);
+		  while(HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin)); // wait release
+		  osDelay(1000);
+		  show_clock = true;
 	  }
 
 	  // tune brightness
 	  if (HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin))
 	  {
-		  brightness = (--brightness)&0b111;
+		  save_vfd();
+		  clr_vfd();
+		  str2vfd("brightness");
+		  vfd_update();
+		  brightness = (brightness - 1)&0b111;
 		  d3231_set_A2M2(0b111-brightness);
 
 		  data = 0b10000000; // command 4
@@ -513,7 +493,9 @@ void StartEncoder(void *argument)
 		  // todo display BRIGHTNESS and scale
 		  osDelay(20);
 		  while(HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin)); // wait release
-		  osDelay(20);
+		  osDelay(100);
+		  restore_vfd();
+		  vfd_update();
 	  }
 
 	  if (show_clock)
@@ -526,8 +508,7 @@ void StartEncoder(void *argument)
 		  clock[3] = (time[2] >> 4) & 0xF;
 
 		  //erase everything...
-		  for (int a = 0; a < sizeof(vfd.arr1); a++)
-			  vfd.arr1[a] = 0;
+		  clr_vfd();
 
 
 		  for (int i = 0; i < 4; i++)
@@ -544,11 +525,7 @@ void StartEncoder(void *argument)
 				  vfd.arr2[6][b] |= ((1<<0)>>(b<<3))&0xFF;
 		  }
 
-		  data = 0b11000000; // command 3, set address to 0
-		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-		  HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-		  HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-		  HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+		  vfd_update();
 
 
 	  }
@@ -563,11 +540,7 @@ void StartEncoder(void *argument)
 				}
 				vfd.arr2[1][0] = buf & 0xFF;
 				vfd.arr2[1][1] = (buf>>8)&0xFF;
-				data = 0b11000000; // command 3, set address to 0
-				HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 0);
-				HAL_SPI_Transmit(&hspi2, &data, 1, 0xffffffff);
-				HAL_SPI_Transmit(&hspi2, vfd.arr1, sizeof(vfd.arr1), 0xffffffff);
-				HAL_GPIO_WritePin(PT6315_STB_GPIO_Port, PT6315_STB_Pin, 1);
+				vfd_update();
 		  }
 	  }
 

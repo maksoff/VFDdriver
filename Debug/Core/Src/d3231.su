@@ -1,2 +1,6 @@
 d3231.c:18:11:d3231_get_time	24	static
-d3231.c:34:6:d3231_set	32	static
+d3231.c:26:11:d3231_get_temp	24	static
+d3231.c:34:11:d3231_get_all	24	static
+d3231.c:42:9:d3231_get_A2M2	8	static
+d3231.c:47:6:d3231_set_A2M2	32	static
+d3231.c:54:6:d3231_set	32	static

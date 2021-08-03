@@ -34,7 +34,6 @@ Core/Src/freertos.o: ../Core/Src/freertos.c \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
- ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pcd.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_ll_usb.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pcd_ex.h \
@@ -43,8 +42,8 @@ Core/Src/freertos.o: ../Core/Src/freertos.c \
  ../Core/Inc/freertos_inc.h ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
  ../Core/Inc/microrl_cmd.h ../Core/Inc/microrl.h \
- ../Core/Inc/microrl_config.h ../Core/Inc/usart.h ../Core/Inc/spi.h \
- ../Core/Inc/vfd.h ../Core/Inc/i2c.h ../Core/Inc/d3231.h
+ ../Core/Inc/microrl_config.h ../Core/Inc/spi.h ../Core/Inc/vfd.h \
+ ../Core/Inc/i2c.h ../Core/Inc/d3231.h
 
 ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
 
@@ -118,8 +117,6 @@ Core/Src/freertos.o: ../Core/Src/freertos.c \
 
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h:
 
-../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
-
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pcd.h:
 
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_ll_usb.h:
@@ -141,8 +138,6 @@ Core/Src/freertos.o: ../Core/Src/freertos.c \
 ../Core/Inc/microrl.h:
 
 ../Core/Inc/microrl_config.h:
-
-../Core/Inc/usart.h:
 
 ../Core/Inc/spi.h:
 

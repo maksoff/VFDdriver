@@ -9,6 +9,12 @@
 #define INC_VFD_H_
 
 uint16_t get_char(char input);
+void str2vfd(char * str);
+void clr_vfd(void);
+
+void save_vfd(void);
+void restore_vfd(void);
+void symbols_vfd(uint32_t symbols);
 
 extern const uint16_t vfd_digits [];
 extern const uint16_t vfd_alpha [];
@@ -20,6 +26,11 @@ extern const uint8_t DIGITS;
 extern const uint8_t ALPHAS;
 extern const uint8_t ALPHAR;
 extern const uint8_t SPECIAL;
+
+union VFD {
+	  uint8_t arr2[11][3];
+	  uint8_t arr1[11*3];
+} vfd;
 
 
 #endif /* INC_VFD_H_ */

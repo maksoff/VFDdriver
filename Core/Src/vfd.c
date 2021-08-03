@@ -129,6 +129,34 @@ const char vfd_special_char [] = {'!',
 									'>',
 									177}; // ±
 
+const uint8_t vfd_symbols [][2] = {  {1, 16}, // 00 // right <
+							   {1, 15}, // right <<
+							   {2, 16},
+							   {2, 15},
+							   {3, 16},
+							   {3, 15},
+							   {4, 16},
+							   {4, 15},
+							   {5, 16},
+							   {5, 15},
+							   {6, 16},
+							   {6, 15}, // 11 // most left bars
+							{8, 16},	//  c
+							{8, 15},	// b
+							{9, 16},	// dolby
+							{10, 16}, 	// >
+							{10, 15},	// <
+		    				   {0, 0}, // digital
+							   {0, 1}, // analog
+							   {0, 4}, // )
+							   {0, 3}, // (
+							   {0, 5}, // <-
+							   {0, 2}, // ->
+							   {0, 6}, // dcc
+
+							   {6, 0}, // :
+};
+
 const uint8_t DIGITS = (sizeof(vfd_digits)/sizeof(vfd_digits[0]));
 const uint8_t ALPHAS = (sizeof(vfd_alpha)/sizeof(vfd_alpha[0]));
 const uint8_t ALPHAR = (sizeof(vfd_alpha_ru)/sizeof(vfd_alpha_ru[0]));
@@ -171,6 +199,25 @@ void str2vfd(char * str)
 		 vfd.arr2[i][1] |= (buf>>8)&(~(1<<7));
 		 if (!--i)
 			 break;
+	}
+}
+
+void symbols_vfd(uint32_t symbols)
+{
+	for (int i = 0; i < sizeof(vfd_symbols)/sizeof(vfd_symbols[0]); i++)
+	{
+		if (symbols & (1<<i))
+		{
+			// set symbol
+			for (int b = 0; b < 3; b++)
+			  vfd.arr2[vfd_symbols[i][0]][b] |= ((1<<vfd_symbols[i][1])>>(b<<3))&0xFF;
+		}
+		else
+		{
+			// reset symbol
+			for (int b = 0; b < 3; b++)
+			  vfd.arr2[vfd_symbols[i][0]][b] &= ~(((1<<vfd_symbols[i][1])>>(b<<3))&0xFF);
+		}
 	}
 }
 

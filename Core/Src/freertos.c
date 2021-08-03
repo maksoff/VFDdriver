@@ -406,7 +406,7 @@ void StartEncoder(void *argument)
 		for (int b = 0; b < 3; b++)
 		  vfd.arr2[arr[j][0]][b] |= ((1<<arr[j][1])>>(b<<3))&0xFF;
 		vfd_update();
-		osDelay(100);
+		osDelay(70);
     }
 
     osDelay(500);
@@ -477,12 +477,17 @@ void StartEncoder(void *argument)
 	  // tune brightness
 	  if (HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin))
 	  {
-		  save_vfd();
-		  clr_vfd();
-		  str2vfd("brightness");
-		  vfd_update();
 		  brightness = (brightness - 1)&0b111;
 		  d3231_set_A2M2(0b111-brightness);
+
+		  save_vfd();
+		  clr_vfd();
+		  uint32_t bits = 0;
+		  for (int i = 2; i < 1 + 2 + brightness; i++)
+			  bits |= 1<<i;
+		  symbols_vfd(bits);
+		  str2vfd("brightness");
+		  vfd_update();
 
 		  data = 0b10000000; // command 4
 		  data |= 1<<3; // enable/disable display

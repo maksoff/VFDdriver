@@ -14,6 +14,7 @@ void clr_vfd(void);
 
 void save_vfd(void);
 void restore_vfd(void);
+void symbols_vfd(uint32_t symbols);
 
 extern const uint16_t vfd_digits [];
 extern const uint16_t vfd_alpha [];
